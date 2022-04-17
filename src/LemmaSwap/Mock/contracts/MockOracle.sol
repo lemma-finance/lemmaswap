@@ -8,25 +8,20 @@ import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/Transfer
 import "forge-std/console.sol";
 
 contract MockOracle {
+    // Price is 1e18 format
     // base --> quote --> price
     mapping( address => mapping(address => uint256) ) public prices;
 
     mapping ( address => mapping(address => bool) ) public isFrozen;
 
-    constructor() {
-        state = 100;
-        isFrozen = false;
-    }
-
     function evolvePrice(address baseToken, address quoteToken) public {
-        prices[baseToken][quoteToken] += 1;
+        if(! isFrozen[baseToken][quoteToken] ) {
+            // Simple logic: price increasing 1% 
+            prices[baseToken][quoteToken] += prices[baseToken][quoteToken] / 100;
+        }
     }
 
-    function getPriceNow(address baseToken, address quoteToken) external returns (uint256) {
-        if (! isFrozen[baseToken][quoteToken]) {
-            evolvePrice(baseToken, quoteToken);
-        }
-
+    function getPriceNow(address baseToken, address quoteToken) view external returns (uint256) {
         return prices[baseToken][quoteToken];
     }
 
