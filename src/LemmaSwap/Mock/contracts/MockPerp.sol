@@ -23,7 +23,7 @@ contract MockPerp {
 
     // trader --> collateral --> amount
     mapping( address => mapping(address => mapping(address => uint256)) ) public shorts;
-    mapping( address => mapping(address => mapping(address => uint256)) ) public openPrice1;
+    mapping( address => mapping(address => mapping(address => uint256)) ) public openPrice;
 
     event Deposited(address, address, uint256, uint256, uint256);
     event Withdrawn(address, address, uint256, uint256, uint256);
@@ -37,26 +37,35 @@ contract MockPerp {
     }
 
 
-    function computePnLDeltaCollateral(uint256 currentPrice, uint256 openPrice, uint256 collateralAmount, bool isShort) internal returns (int256) {
-        if (currentPrice >= openPrice) {
-            uint256 perc_1e6 = (currentPrice - openPrice) * 1e6 / openPrice;
+    function computeUpdatedCollateralAmount(uint256 currentPrice, uint256 openPrice, uint256 collateralAmount, bool isShort) internal pure returns (uint256) {
+        uint256 res = collateralAmount;
+        if (currentPrice > openPrice) {
+            uint256 coeff_1e6 = 1e6 + ((currentPrice - openPrice) * 1e6 / openPrice);
+
+            return (isShort) ? collateralAmount / coeff_1e6 : collateralAmount * coeff_1e6;
+
         } else {
-            uint256 perc_1e6 = (openPrice - currentPrice) * 1e6 / openPrice;
+            uint256 coeff_1e6 = 1e6 + ((openPrice - currentPrice) * 1e6 / openPrice);
+
+            return (isShort) ? collateralAmount * coeff_1e6 : collateralAmount / coeff_1e6;
         }
     }
 
     function openShort1XWExactCollateral(address collateral, uint256 amount) external returns(uint256) {
         uint256 feeAmount = amount * feeOpenShort_1e6 / 1e6;
-        TransferHelper.safeTransferFrom(collateral, msg.sender, address(this), feeAmount);
-
-        uint256 actualAmount = amount - feeAmount;
-
+        uint256 netAmount = amount - feeAmount;
 
         if (shorts[msg.sender][collateral][defaultQuoteToken] > 0) {
             // Need to compute PnL on the current position
-
+            shorts[msg.sender][collateral][defaultQuoteToken] = computeUpdatedCollateralAmount(
+                oracle.getPriceNow(collateral, defaultQuoteToken),
+                openPrice[msg.sender][collateral][defaultQuoteToken],
+                shorts[msg.sender][collateral][defaultQuoteToken],
+                true
+            );
         }
 
+        shorts[msg.sender][collateral][defaultQuoteToken] += netAmount;
     }
 
 }
