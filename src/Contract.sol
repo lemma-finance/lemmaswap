@@ -8,6 +8,7 @@ import {MockLemmaTreasury, MockUSDL} from "./LemmaSwap/Mock/contracts/MockUSDL.s
 import {Denominations} from "./LemmaSwap/Mock/libs/Denominations.sol";
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 // import {ERC20} from "solmate/tokens/ERC20.sol";
 
 contract Collateral is ERC20 {
@@ -23,14 +24,18 @@ contract Collateral is ERC20 {
 contract Deployment {
     MockOracle public oracle;
     MockPerp public perp;
-    Collateral public collateral;
+    Collateral public weth;
+    Collateral public wbtc;
     MockLemmaTreasury public lemmaTreasury;
     MockUSDL public usdl;
+    LemmaSwap public lemmaSwap;
     
     constructor() {
-        collateral = new Collateral("WETH", "WETH", 100e18);
+        weth = new Collateral("WETH", "WETH", 100e18);
+        wbtc = new Collateral("WBTC", "WBTC", 100e18);
         oracle = new MockOracle();
-        oracle.setPriceNow(address(collateral), Denominations.USD, 100);
+        oracle.setPriceNow(address(weth), Denominations.USD, 100e18);
+        oracle.setPriceNow(address(wbtc), Denominations.USD, 120e18);
 
         perp = new MockPerp(
             IMockOracle(address(oracle)),
@@ -44,6 +49,13 @@ contract Deployment {
             "USDL",
             address(lemmaTreasury)
         );
+
+        usdl.setPrice(address(weth), 100e18);
+        usdl.setPrice(address(wbtc), 50e18);
+
+        lemmaSwap = new LemmaSwap(address(usdl));
+        lemmaSwap.setCollateralToDexIndex(address(weth), 0);
+        lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
     }
 
     function askForMoney(address collateral, uint256 amount) external {

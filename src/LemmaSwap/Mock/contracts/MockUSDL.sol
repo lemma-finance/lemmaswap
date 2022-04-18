@@ -30,7 +30,7 @@ contract MockUSDL is ERC20 {
     uint256 feesPerpCloseShort;
 
     // Price Now of a Collateral in USD
-    mapping (address => uint256) price;
+    mapping (address => uint256) public price;
 
     event Deposited(address, address, uint256, uint256, uint256);
     event Withdrawn(address, address, uint256, uint256, uint256);
@@ -89,10 +89,10 @@ contract MockUSDL is ERC20 {
         IERC20 collateral
     ) external {
         uint256 fees = collateralAmount * feesUSDLRedeem / 1e6;
-        TransferHelper.safeTransferFrom(address(collateral), address(this), lemmaTreasury, fees);
+        TransferHelper.safeTransfer(address(collateral), lemmaTreasury, fees);
 
         uint256 netCollateral = collateralAmount - fees;
-        TransferHelper.safeTransferFrom(address(collateral), address(this), to, netCollateral);
+        TransferHelper.safeTransfer(address(collateral), to, netCollateral);
 
         uint256 usdlToBurn = collateralAmount * price[address(collateral)] / 1e18;
         _burn(msg.sender, usdlToBurn);

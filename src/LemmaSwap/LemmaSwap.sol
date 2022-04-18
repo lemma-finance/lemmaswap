@@ -27,15 +27,15 @@ contract LemmaSwap {
 
     constructor(
         // ILemmaRouter _lemmaRouter, 
-        IUSDLSwapSubset _usdl) {
+        address _usdl) {
         owner = msg.sender;
         // lemmaRouter = _lemmaRouter; 
-        usdl = _usdl;
+        usdl = IUSDLSwapSubset(_usdl);
 
         // The standard is 0.1% 
         lemmaSwapFees = 1000;
 
-        usdl.approve(address(lemmaRouter), type(uint256).max);
+        // usdl.approve(address(lemmaRouter), type(uint256).max);
     }
 
     modifier onlyOwner() {
@@ -148,7 +148,7 @@ contract LemmaSwap {
             0,
             tokenIn.token
         );
-
+        console.log("[LemmaSwap] T1 ");
         // Need to take into account there is a 1% fee in redeeming 
         uint256 expectedOutput = tokenOut.amount;
         tokenOut.amount = getAdjustedOutputAmount(tokenOut);
@@ -160,7 +160,7 @@ contract LemmaSwap {
             type(uint256).max,
             tokenOut.token
         );
-
+        console.log("[LemmaSwap] T2 ");
         //_returnAllTokens(tokenIn.token);
         _returnAllTokens(usdl);
 
