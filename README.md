@@ -27,6 +27,23 @@ It is Forge Standard Library and contains useful stuff like `console.log()` comm
 
 
 
+1.2.2 Install UniswapV3 Periphery 
+
+```
+forge install Uniswap/v3-periphery
+```
+
+
+
+1.2.3 Install OpenZeppelin Contracts 
+
+```
+forge install Openzeppelin/openzeppelin-contracts
+```
+
+
+
+
 2. Initialize Foundry Project with 
 
 ```
