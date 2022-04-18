@@ -25,9 +25,11 @@ contract LemmaSwap {
     // Fees in 1e6 format: 1e6 is 100% 
     uint256 public lemmaSwapFees; 
 
-    constructor(ILemmaRouter _lemmaRouter, IUSDLSwapSubset _usdl) {
+    constructor(
+        // ILemmaRouter _lemmaRouter, 
+        IUSDLSwapSubset _usdl) {
         owner = msg.sender;
-        lemmaRouter = _lemmaRouter; 
+        // lemmaRouter = _lemmaRouter; 
         usdl = _usdl;
 
         // The standard is 0.1% 

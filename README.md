@@ -43,6 +43,13 @@ forge install Openzeppelin/openzeppelin-contracts
 
 
 
+1.2.4 Install Solmate 
+
+```
+forge install Rari-Capital/solmate
+```
+
+
 
 2. Initialize Foundry Project with 
 
