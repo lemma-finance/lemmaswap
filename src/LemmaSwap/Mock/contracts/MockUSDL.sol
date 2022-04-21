@@ -72,12 +72,12 @@ contract MockUSDL is ERC20 {
     // }
 
     // Converts USDL amount to Collateral amount at oracle price
-    function _USDL2Collateral(address collateral, uint256 amount) internal returns (uint256) {
+    function USDL2Collateral(address collateral, uint256 amount) public view returns (uint256) {
         require(price[collateral] != 0, "Unsupported Collateral");
         return amount * 1e18 / price[address(collateral)]; 
     }
 
-    function _Collateral2USDL(address collateral, uint256 amount) internal returns (uint256) {
+    function Collateral2USDL(address collateral, uint256 amount) public view returns (uint256) { 
         require(price[collateral] != 0, "Unsupported Collateral");
         return amount * price[address(collateral)] / 1e18;
     }
@@ -111,7 +111,7 @@ contract MockUSDL is ERC20 {
         IERC20 collateral,
         bool isLemmaSwap
     ) public {
-        uint256 collateralAmount = _USDL2Collateral(address(collateral), amount);
+        uint256 collateralAmount = USDL2Collateral(address(collateral), amount);
         uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
         // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
@@ -136,7 +136,7 @@ contract MockUSDL is ERC20 {
         // uint256 netCollateral = collateralAmount - fees;
         TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateral);
 
-        uint256 usdlToMint = _Collateral2USDL(address(collateral), netCollateral);
+        uint256 usdlToMint = Collateral2USDL(address(collateral), netCollateral);
         require(usdlToMint > minUSDLToMint, "! minUSDLToMint");
         _mint(to, usdlToMint);
     }
@@ -148,11 +148,11 @@ contract MockUSDL is ERC20 {
         uint256 minCollateralAmountToGetBack,
         IERC20 collateral
     ) public {
-        uint256 collateralAmount = _USDL2Collateral(address(collateral), amount);
+        uint256 collateralAmount = USDL2Collateral(address(collateral), amount);
         uint256 netCollateralToGetBack = _takeFees(perpetualDEXIndex, collateral, collateralAmount, false);
         // uint256 fees = collateralAmount * feesUSDLRedeem / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), address(this), lemmaTreasury, fees);
-        TransferHelper.safeTransferFrom(address(collateral), address(this), msg.sender, netCollateralToGetBack);
+        TransferHelper.safeTransfer(address(collateral), msg.sender, netCollateralToGetBack);
         _burn(to, amount)  ;
     }
 
@@ -172,7 +172,7 @@ contract MockUSDL is ERC20 {
         // uint256 netCollateral = collateralAmount - fees;
         TransferHelper.safeTransfer(address(collateral), to, netCollateralToGetBack);
 
-        uint256 usdlToBurn = _Collateral2USDL(address(collateral), netCollateralToGetBack); 
+        uint256 usdlToBurn = Collateral2USDL(address(collateral), netCollateralToGetBack); 
         // uint256 usdlToBurn = collateralAmount * price[address(collateral)] / 1e18;
         _burn(msg.sender, usdlToBurn);
     }

@@ -104,6 +104,26 @@ contract LemmaSwap {
         return collateralToDexIndex[collateral] - 1;
     }
 
+
+
+
+    function getAmountsIn(sToken memory tokenIn, sToken memory tokenOut) public view returns(uint256) {
+        uint256 totalCollateralOutRequired = tokenOut.amount + getProtocolFeesTokenOut(tokenOut);
+        uint256 totalUSDLRequired = usdl.Collateral2USDL(address(tokenOut.token), totalCollateralOutRequired);
+        uint256 totalCollateralInRequired = usdl.USDL2Collateral(address(tokenIn.token), totalUSDLRequired);
+        return totalCollateralInRequired + getProtocolFeesTokenIn(tokenIn);
+    }
+
+
+    function getAmountsOut(sToken memory tokenIn, sToken memory tokenOut) public view returns(uint256) {
+        uint256 netCollateralInAmount = tokenIn.amount - getProtocolFeesTokenIn(tokenIn);
+        uint256 netUSDLAmount = usdl.Collateral2USDL(address(tokenIn.token), netCollateralInAmount);
+        uint256 totalCollateralOutAmount = usdl.USDL2Collateral(address(tokenOut.token), netUSDLAmount);
+        tokenOut.amount = totalCollateralOutAmount;
+        return totalCollateralOutAmount - getProtocolFeesTokenOut(tokenOut);
+    }
+
+
     function swapWithExactInputAndOutput(
         sToken memory tokenIn,
         sToken memory tokenOut
@@ -186,6 +206,106 @@ contract LemmaSwap {
         _returnAllTokens(usdl);
 
         return tokenOut.token.balanceOf(address(this));
+    }
+
+
+    function swapWithExactInput(
+        sToken memory tokenIn,
+        sToken memory tokenOut
+    ) public returns (uint256) {
+
+        // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
+        // require(collateralToDexIndex[address(tokenOut.token)] != address(0), "! collateral tokenOut");
+
+        require(tokenIn.amount > 0, "! tokenIn amount");
+
+        console.log("[LemmaSwap swapWithExactInput()] TokenIn Amount ", tokenIn.amount);
+        console.log("[LemmaSwap swapWithExactInput()] collateralToDexIndex[address(tokenIn.token)] ", convertCollateralToValidDexIndex(address(tokenIn.token)));
+
+        TransferHelper.safeTransferFrom(
+            address(tokenIn.token),
+            msg.sender,
+            address(this),
+            tokenIn.amount
+        );
+
+        console.log("[LemmaSwap] Balance TokenIn Before = ", tokenIn.token.balanceOf(address(this)));
+
+        uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn);
+        TransferHelper.safeTransfer(
+            address(tokenIn.token),
+            usdl.lemmaTreasury(),
+            getProtocolFeesTokenIn(tokenIn)
+        );
+        
+        console.log("[LemmaSwap] protocolFeesIn = ", protocolFeesIn);
+        
+        // console.log("[LemmaSwap] LemmaTreasury = ", usdl.lemmaTreasury());
+
+        console.log("[LemmaSwap] Balance TokenIn After = ", tokenIn.token.balanceOf(address(this)));
+
+        tokenIn.amount = tokenIn.token.balanceOf(address(this));
+
+
+        if (tokenIn.token.allowance(address(this), address(usdl)) < type(uint256).max) {
+            tokenIn.token.approve(address(usdl), type(uint256).max);
+        }
+
+        usdl.depositToWExactCollateral(
+            address(this),
+            tokenIn.amount,
+            convertCollateralToValidDexIndex(address(tokenIn.token)),
+            0,
+            tokenIn.token
+        );
+        // Need to take into account there is a 1% fee in redeeming 
+        // uint256 expectedOutput = tokenOut.amount;
+        // tokenOut.amount = getAdjustedOutputAmount(tokenOut);
+
+        uint256 usdlAmount = usdl.balanceOf(address(this));
+
+        usdl.withdrawTo(
+            address(this),
+            usdlAmount,
+            convertCollateralToValidDexIndex(address(tokenOut.token)),
+            tokenOut.amount,
+            tokenOut.token
+        );
+
+        tokenOut.amount = tokenOut.token.balanceOf(address(this));
+
+        uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut);
+
+        TransferHelper.safeTransfer(
+            address(tokenOut.token),
+            usdl.lemmaTreasury(),
+            getProtocolFeesTokenOut(tokenOut)
+        );
+        
+        console.log("[LemmaSwap] protocolFeesOut = ", protocolFeesOut);
+
+        uint256 netCollateralToGetBack = tokenOut.token.balanceOf(address(this));
+
+        TransferHelper.safeTransfer(
+            address(tokenOut.token),
+            msg.sender,
+            netCollateralToGetBack
+        );
+
+        //_returnAllTokens(tokenIn.token);
+        _returnAllTokens(usdl);
+
+        return tokenOut.token.balanceOf(address(this));
+    }
+
+
+    function swapWithExactOutput(
+        sToken memory tokenIn,
+        sToken memory tokenOut
+    ) external returns (uint256) {
+        tokenIn.amount = getAmountsIn(tokenIn, tokenOut);
+        require(tokenIn.amount > 0, "No corresponding input amount");
+        return swapWithExactInput(tokenIn, tokenOut);
     }
 
 

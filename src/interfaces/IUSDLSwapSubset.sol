@@ -20,6 +20,27 @@ interface IUSDLSwapSubset is IERC20 {
         IERC20 collateral
     ) external;
 
+    function depositTo(
+        address to,
+        uint256 amount,
+        uint256 perpetualDEXIndex,
+        uint256 maxCollateralAmountRequired,
+        IERC20 collateral,
+        bool isLemmaSwap
+    ) external;
+
+
+    function withdrawTo(
+        address to,
+        uint256 amount,
+        uint256 perpetualDEXIndex,
+        uint256 minCollateralAmountToGetBack,
+        IERC20 collateral
+    ) external;
+
+    function USDL2Collateral(address collateral, uint256 amount) external view returns (uint256);
+    function Collateral2USDL(address collateral, uint256 amount) external view returns (uint256);
+
 
     function lemmaTreasury() external view returns (address);
     function getFees(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
