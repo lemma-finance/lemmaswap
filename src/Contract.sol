@@ -56,6 +56,8 @@ contract Deployment {
         lemmaSwap = new LemmaSwap(address(usdl));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
+
+        usdl.setLemmaSwap(address(lemmaSwap));
     }
 
     function askForMoney(address collateral, uint256 amount) external {

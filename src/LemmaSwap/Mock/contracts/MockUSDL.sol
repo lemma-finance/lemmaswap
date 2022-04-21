@@ -112,10 +112,10 @@ contract MockUSDL is ERC20 {
         bool isLemmaSwap
     ) public {
         uint256 collateralAmount = _USDL2Collateral(address(collateral), amount);
-        _takeFees(0, collateral, collateralAmount, true);
+        uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
         // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
-        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), collateralAmount);
+        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
         _mint(to, amount);  
     }
 
@@ -164,6 +164,8 @@ contract MockUSDL is ERC20 {
         IERC20 collateral
     ) external {
         uint256 netCollateralToGetBack = _takeFees(perpetualDEXIndex, collateral, collateralAmount, false);
+        console.log("withdrawToWExactCollateral() collateralAmount = ", collateralAmount);
+        console.log("withdrawToWExactCollateral() netCollateralToGetBack = ", netCollateralToGetBack);
         // uint256 fees = collateralAmount * feesUSDLRedeem / 1e6;
         // TransferHelper.safeTransfer(address(collateral), lemmaTreasury, fees);
 

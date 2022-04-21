@@ -108,6 +108,14 @@ contract ContractTest is DSTest {
         console.log("Final WETH Balance = ", d.usdl().balanceOf(address(this)));
 
         assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
+
+        console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this))) ;
+        console.log("wbtcInitialBalance = ", wbtcInitialBalance) ;
+        console.log("tokenOut.amount = ", tokenOut.amount) ;
+        console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount) ;
+
+        // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount) ;
+
         assertTrue( d.wbtc().balanceOf(address(this)) == wbtcInitialBalance + tokenOut.amount );
     }
 
