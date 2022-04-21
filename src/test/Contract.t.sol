@@ -98,7 +98,7 @@ contract ContractTest is DSTest {
 
         sToken memory tokenOut = sToken({
             token: d.wbtc(), 
-            amount: 15e17
+            amount: 12e17
         });
 
         d.lemmaSwap().swapWithExactInputAndOutput(tokenIn, tokenOut);
