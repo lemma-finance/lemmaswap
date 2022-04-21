@@ -101,7 +101,7 @@ contract ContractTest is DSTest {
             amount: 15e17
         });
 
-        d.lemmaSwap().swapWithExactOutput(tokenIn, tokenOut);
+        d.lemmaSwap().swapWithExactInputAndOutput(tokenIn, tokenOut);
 
         console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
         console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));

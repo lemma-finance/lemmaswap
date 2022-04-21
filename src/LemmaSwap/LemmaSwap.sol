@@ -100,7 +100,7 @@ contract LemmaSwap {
         return collateralToDexIndex[collateral] - 1;
     }
 
-    function swapWithExactOutput(
+    function swapWithExactInputAndOutput(
         sToken memory tokenIn,
         sToken memory tokenOut
     ) external returns (uint256) {
