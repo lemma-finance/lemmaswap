@@ -105,14 +105,15 @@ contract LemmaSwap {
     }
 
     function swapExactTokensForTokens(
-        uint amountIn,
-        uint amountOutMin,
+        uint256 amountIn,
+        uint256 amountOutMin,
         address[] calldata path,
         address to,
-        uint deadline
-    ) external returns (uint[] memory amounts) {
+        uint256 deadline
+    ) external returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
-        swapWithExactInput(
+        uint256[] memory res;
+        res[0] = swapWithExactInput(
             sToken({
                 token: IERC20(path[0]),
                 amount: amountIn
@@ -123,6 +124,30 @@ contract LemmaSwap {
             }),
             to
             );
+        return res;
+    }
+
+    function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts) {
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        uint256[] memory res;
+        res[0] = swapWithExactOutput(
+            sToken({
+                token: IERC20(path[1]),
+                amount: amountInMax
+            }), 
+            sToken({
+                token: IERC20(path[0]),
+                amount: amountOut
+            }),
+            to
+            );
+        return res;
     }
 
 
