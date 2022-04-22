@@ -53,11 +53,11 @@ contract LemmaSwap {
         _;
     }
 
-    function _returnAllTokens(IERC20 token) internal {
+    function _returnAllTokens(IERC20 token, address to) internal {
         if (token.balanceOf(address(this)) > 0) {
             TransferHelper.safeTransfer(
                 address(token),
-                msg.sender,
+                to,
                 token.balanceOf(address(this))
             );
         }
@@ -104,6 +104,26 @@ contract LemmaSwap {
         return collateralToDexIndex[collateral] - 1;
     }
 
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts) {
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        swapWithExactInput(
+            sToken({
+                token: IERC20(path[0]),
+                amount: amountIn
+            }), 
+            sToken({
+                token: IERC20(path[1]),
+                amount: amountOutMin
+            }),
+            to
+            );
+    }
 
 
 
@@ -126,8 +146,9 @@ contract LemmaSwap {
 
     function swapWithExactInputAndOutput(
         sToken memory tokenIn,
-        sToken memory tokenOut
-    ) external returns (uint256) {
+        sToken memory tokenOut,
+        address to
+    ) public returns (uint256) {
 
         // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
         // require(collateralToDexIndex[address(tokenOut.token)] != address(0), "! collateral tokenOut");
@@ -203,7 +224,7 @@ contract LemmaSwap {
         );
 
         //_returnAllTokens(tokenIn.token);
-        _returnAllTokens(usdl);
+        _returnAllTokens(usdl, to);
 
         return tokenOut.token.balanceOf(address(this));
     }
@@ -211,7 +232,8 @@ contract LemmaSwap {
 
     function swapWithExactInput(
         sToken memory tokenIn,
-        sToken memory tokenOut
+        sToken memory tokenOut,
+        address to
     ) public returns (uint256) {
 
         // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
@@ -288,12 +310,12 @@ contract LemmaSwap {
 
         TransferHelper.safeTransfer(
             address(tokenOut.token),
-            msg.sender,
+            to,
             netCollateralToGetBack
         );
 
         //_returnAllTokens(tokenIn.token);
-        _returnAllTokens(usdl);
+        _returnAllTokens(usdl, to);
 
         return tokenOut.token.balanceOf(address(this));
     }
@@ -301,11 +323,12 @@ contract LemmaSwap {
 
     function swapWithExactOutput(
         sToken memory tokenIn,
-        sToken memory tokenOut
-    ) external returns (uint256) {
+        sToken memory tokenOut, 
+        address to
+    ) public returns (uint256) {
         tokenIn.amount = getAmountsIn(tokenIn, tokenOut);
         require(tokenIn.amount > 0, "No corresponding input amount");
-        return swapWithExactInput(tokenIn, tokenOut);
+        return swapWithExactInput(tokenIn, tokenOut, to);
     }
 
 

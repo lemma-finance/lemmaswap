@@ -78,90 +78,90 @@ contract ContractTest is DSTest {
         assertTrue( d.usdl().balanceOf(address(this)) == expectedUSDL );
     }
 
-    // function testSwap1() public {
-    //     Minter m1 = new Minter(d);
-    //     m1.mint(d.weth(), 10e18);
+    function testSwap1() public {
+        Minter m1 = new Minter(d);
+        m1.mint(d.weth(), 10e18);
 
-    //     Minter m2 = new Minter(d);
-    //     m2.mint(d.wbtc(), 50e18);
+        Minter m2 = new Minter(d);
+        m2.mint(d.wbtc(), 50e18);
 
-    //     d.askForMoney(address(d.weth()), 10e18);
+        d.askForMoney(address(d.weth()), 10e18);
 
-    //     uint256 wethInitialBalance = d.weth().balanceOf(address(this));
-    //     uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
 
-    //     d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
-    //     sToken memory tokenIn = sToken({
-    //         token: d.weth(), 
-    //         amount: 1e18
-    //     });
+        d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
+        sToken memory tokenIn = sToken({
+            token: d.weth(), 
+            amount: 1e18
+        });
 
-    //     sToken memory tokenOut = sToken({
-    //         token: d.wbtc(), 
-    //         amount: 12e17
-    //     });
+        sToken memory tokenOut = sToken({
+            token: d.wbtc(), 
+            amount: 12e17
+        });
 
-    //     d.lemmaSwap().swapWithExactInputAndOutput(tokenIn, tokenOut);
+        d.lemmaSwap().swapWithExactInputAndOutput(tokenIn, tokenOut, address(this));
 
-    //     console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
-    //     console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
-    //     console.log("Final USDL Balance = ", d.usdl().balanceOf(address(this)));
+        console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
+        console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
+        console.log("Final USDL Balance = ", d.usdl().balanceOf(address(this)));
 
-    //     assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
+        assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
 
-    //     console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this))) ;
-    //     console.log("wbtcInitialBalance = ", wbtcInitialBalance) ;
-    //     console.log("tokenOut.amount = ", tokenOut.amount) ;
-    //     console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount) ;
+        console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this))) ;
+        console.log("wbtcInitialBalance = ", wbtcInitialBalance) ;
+        console.log("tokenOut.amount = ", tokenOut.amount) ;
+        console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount) ;
 
-    //     // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount) ;
+        // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount) ;
 
-    //     assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
-    //     assertTrue( d.wbtc().balanceOf(address(this)) == wbtcInitialBalance + tokenOut.amount );
-    // }
+        assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
+        assertTrue( d.wbtc().balanceOf(address(this)) == wbtcInitialBalance + tokenOut.amount );
+    }
 
 
-    // function testSwap2() public {
-    //     Minter m1 = new Minter(d);
-    //     m1.mint(d.weth(), 10e18);
+    function testSwap2() public {
+        Minter m1 = new Minter(d);
+        m1.mint(d.weth(), 10e18);
 
-    //     Minter m2 = new Minter(d);
-    //     m2.mint(d.wbtc(), 50e18);
+        Minter m2 = new Minter(d);
+        m2.mint(d.wbtc(), 50e18);
 
-    //     d.askForMoney(address(d.weth()), 10e18);
+        d.askForMoney(address(d.weth()), 10e18);
 
-    //     uint256 wethInitialBalance = d.weth().balanceOf(address(this));
-    //     uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
 
-    //     d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
-    //     sToken memory tokenIn = sToken({
-    //         token: d.weth(), 
-    //         amount: 1e18
-    //     });
+        d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
+        sToken memory tokenIn = sToken({
+            token: d.weth(), 
+            amount: 1e18
+        });
 
-    //     sToken memory tokenOut = sToken({
-    //         token: d.wbtc(), 
-    //         amount: 0
-    //     });
+        sToken memory tokenOut = sToken({
+            token: d.wbtc(), 
+            amount: 0
+        });
 
-    //     d.lemmaSwap().swapWithExactInput(tokenIn, tokenOut);
+        d.lemmaSwap().swapWithExactInput(tokenIn, tokenOut, address(this));
 
-    //     console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
-    //     console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
-    //     console.log("Final WETH Balance = ", d.usdl().balanceOf(address(this)));
+        console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
+        console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
+        console.log("Final WETH Balance = ", d.usdl().balanceOf(address(this)));
 
-    //     assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
+        assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
 
-    //     console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this))) ;
-    //     console.log("wbtcInitialBalance = ", wbtcInitialBalance) ;
-    //     console.log("tokenOut.amount = ", tokenOut.amount) ;
-    //     console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount) ;
+        console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this))) ;
+        console.log("wbtcInitialBalance = ", wbtcInitialBalance) ;
+        console.log("tokenOut.amount = ", tokenOut.amount) ;
+        console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount) ;
 
-    //     // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount) ;
+        // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount) ;
 
-    //     assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
-    //     assertTrue( d.wbtc().balanceOf(address(this)) == d.lemmaSwap().getAmountsOut(tokenIn, tokenOut) );
-    // }
+        assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - tokenIn.amount );
+        assertTrue( d.wbtc().balanceOf(address(this)) == d.lemmaSwap().getAmountsOut(tokenIn, tokenOut) );
+    }
 
 
     function testSwap3() public {
@@ -187,7 +187,7 @@ contract ContractTest is DSTest {
             amount: 1e15
         });
 
-        d.lemmaSwap().swapWithExactOutput(tokenIn, tokenOut);
+        d.lemmaSwap().swapWithExactOutput(tokenIn, tokenOut, address(this));
 
         console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
         console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
