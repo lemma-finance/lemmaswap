@@ -112,7 +112,7 @@ contract LemmaSwap {
         uint256 deadline
     ) external returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
-        uint256[] memory res;
+        uint256[] memory res = new uint256[](1);
         res[0] = swapWithExactInput(
             sToken({
                 token: IERC20(path[0]),
