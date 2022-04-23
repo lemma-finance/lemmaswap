@@ -153,8 +153,9 @@ contract MockUSDL is ERC20 {
         uint256 netCollateralToGetBack = _takeFees(perpetualDEXIndex, collateral, collateralAmount, false);
         // uint256 fees = collateralAmount * feesUSDLRedeem / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), address(this), lemmaTreasury, fees);
+        require(netCollateralToGetBack >= minCollateralAmountToGetBack, "! netCollateralToGetBack");
         TransferHelper.safeTransfer(address(collateral), msg.sender, netCollateralToGetBack);
-        _burn(to, amount)  ;
+        _burn(to, amount);
     }
 
     function withdrawToWExactCollateral(
