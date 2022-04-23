@@ -13,3 +13,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/Openzeppelin/openzeppelin-contracts
+[submodule "lib/WETH10"]
+	path = lib/WETH10
+	url = https://github.com/WETH10/WETH10

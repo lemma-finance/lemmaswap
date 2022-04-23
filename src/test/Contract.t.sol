@@ -8,6 +8,7 @@ import {MockOracle} from "../LemmaSwap/Mock/contracts/MockOracle.sol";
 import {MockPerp} from "../LemmaSwap/Mock/contracts/MockPerp.sol";
 import {Denominations} from "../LemmaSwap/Mock/libs/Denominations.sol";
 import {MockLemmaTreasury, MockUSDL} from "../LemmaSwap/Mock/contracts/MockUSDL.sol";
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {sToken} from "../interfaces/ILemmaRouter.sol";
@@ -21,7 +22,7 @@ contract Minter {
         d = _d;
     }
 
-    function mint(Collateral collateral, uint256 amount) external {
+    function mint(IERC20 collateral, uint256 amount) external {
         d.askForMoney(address(collateral), amount);
         collateral.approve(address(d.usdl()), type(uint256).max);
         d.usdl().depositToWExactCollateral(

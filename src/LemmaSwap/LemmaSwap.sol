@@ -2,10 +2,12 @@ pragma solidity ^0.7.6;
 pragma abicoder v2;
 
 import {Multicall} from '@uniswap/v3-periphery/contracts/base/Multicall.sol';
-import {IWETH9} from '@uniswap/v3-periphery/contracts/interfaces/external/IWETH9.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+// import {IWETH9} from '@uniswap/v3-periphery/contracts/interfaces/external/IWETH9.sol';
+// import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
+import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
 // import "../interfaces/IUSDLemma.sol";
 import "../interfaces/IPermit.sol";
 import "../interfaces/ILemmaRouter.sol";
@@ -25,12 +27,16 @@ contract LemmaSwap {
     // Fees in 1e6 format: 1e6 is 100% 
     uint256 public lemmaSwapFees; 
 
+
+    IWETH10 public weth;
+
     constructor(
         // ILemmaRouter _lemmaRouter, 
-        address _usdl) {
+        address _usdl, address _weth) {
         owner = msg.sender;
         // lemmaRouter = _lemmaRouter; 
         usdl = IUSDLSwapSubset(_usdl);
+        weth = IWETH10(_weth);
 
         // The standard is 0.1% 
         lemmaSwapFees = 1000;
@@ -104,6 +110,7 @@ contract LemmaSwap {
         return collateralToDexIndex[collateral] - 1;
     }
 
+    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L224
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -127,6 +134,7 @@ contract LemmaSwap {
         return res;
     }
 
+    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L238
     function swapTokensForExactTokens(
         uint amountOut,
         uint amountInMax,
@@ -149,6 +157,37 @@ contract LemmaSwap {
             );
         return res;
     }
+
+    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
+    function swapExactETHForTokens(uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts) {
+
+
+        }
+
+    function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] calldata path, address to, uint256 deadline)
+        external
+        returns (uint256[] memory amounts) {
+
+        }
+
+    function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)
+        external
+        returns (uint256[] memory amounts) {
+
+        }
+
+    function swapETHForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
+        external
+        payable
+        returns (uint256[] memory amounts) {
+
+        }
+
+
+
 
 
 
@@ -253,6 +292,7 @@ contract LemmaSwap {
 
         return tokenOut.token.balanceOf(address(this));
     }
+
 
 
     function swapWithExactInput(

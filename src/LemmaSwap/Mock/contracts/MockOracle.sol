@@ -3,7 +3,8 @@ pragma abicoder v2;
 
 import {Multicall} from '@uniswap/v3-periphery/contracts/base/Multicall.sol';
 import {IWETH9} from '@uniswap/v3-periphery/contracts/interfaces/external/IWETH9.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
+// import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import "forge-std/console.sol";
 

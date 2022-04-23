@@ -7,6 +7,9 @@ import {MockPerp} from "./LemmaSwap/Mock/contracts/MockPerp.sol";
 import {MockLemmaTreasury, MockUSDL} from "./LemmaSwap/Mock/contracts/MockUSDL.sol";
 import {Denominations} from "./LemmaSwap/Mock/libs/Denominations.sol";
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
+import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
+import {WETH10} from "@weth10/WETH10.sol";
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 // import {ERC20} from "solmate/tokens/ERC20.sol";
@@ -21,18 +24,26 @@ contract Collateral is ERC20 {
     }
 }
 
+contract MyWETH is WETH10 {
+    constructor(uint256 initialSupply) WETH10() {
+        balanceOf[msg.sender] += initialSupply;
+    }
+}
+
 contract Deployment {
     MockOracle public oracle;
     MockPerp public perp;
-    Collateral public weth;
-    Collateral public wbtc;
+    // Collateral public weth;
+    IERC20 public wbtc;
     MockLemmaTreasury public lemmaTreasury;
     MockUSDL public usdl;
     LemmaSwap public lemmaSwap;
+    IWETH10 public weth;
     
     constructor() {
-        weth = new Collateral("WETH", "WETH", 100e18);
-        wbtc = new Collateral("WBTC", "WBTC", 100e18);
+        // weth = new Collateral("WETH", "WETH", 100e18);
+        weth = IWETH10(address(new MyWETH(100e18)));
+        wbtc = IERC20(address(new Collateral("WBTC", "WBTC", 100e18)));
         oracle = new MockOracle();
         oracle.setPriceNow(address(weth), Denominations.USD, 100e18);
         oracle.setPriceNow(address(wbtc), Denominations.USD, 120e18);
@@ -53,7 +64,7 @@ contract Deployment {
         usdl.setPrice(address(weth), 100e18);
         usdl.setPrice(address(wbtc), 50e18);
 
-        lemmaSwap = new LemmaSwap(address(usdl));
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
