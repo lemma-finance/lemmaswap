@@ -172,10 +172,12 @@ contract LemmaSwap {
         payable
         returns (uint256[] memory amounts) {
             uint256 amountIn = msg.value;
-            weth.deposit{value: amountIn};
-            require(path.length == 2, "! Multi-hop swap not supported yet");
+            console.log("[swapExactETHForTokens] msg.value = ", msg.value);
+            weth.deposit{value: amountIn}();
+            console.log("[swapExactETHForTokens] After Deposit Balance = ", weth.balanceOf(address(this)));
+            require(path.length == 1, "! Multi-hop swap not supported yet");
             uint256[] memory res = new uint256[](1);
-            res[0] = swapWithExactInput(
+            res[0] = _swapWithExactInput(
                 sToken({
                     token: weth,
                     amount: amountIn
@@ -184,6 +186,7 @@ contract LemmaSwap {
                     token: IERC20(path[0]),
                     amount: amountOutMin
                 }),
+                address(this),
                 to
                 );
             return res;
@@ -329,12 +332,22 @@ contract LemmaSwap {
     }
 
 
-
     function swapWithExactInput(
         sToken memory tokenIn,
         sToken memory tokenOut,
         address to
     ) public returns (uint256) {
+
+        return _swapWithExactInput(tokenIn, tokenOut, msg.sender, to);
+    }
+
+
+    function _swapWithExactInput(
+        sToken memory tokenIn,
+        sToken memory tokenOut,
+        address from,
+        address to
+    ) internal returns (uint256) {
 
         // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
         // require(collateralToDexIndex[address(tokenOut.token)] != address(0), "! collateral tokenOut");
@@ -346,7 +359,7 @@ contract LemmaSwap {
 
         TransferHelper.safeTransferFrom(
             address(tokenIn.token),
-            msg.sender,
+            from,
             address(this),
             tokenIn.amount
         );

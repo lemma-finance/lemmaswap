@@ -41,14 +41,14 @@ contract ContractTest is DSTest {
     mapping(string => bool) public runTests;
 
     constructor() DSTest() {
-        runTests["testOracle"]                              =       true;
-        runTests["testPerp"]                                =       true;
-        runTests["testMint"]                                =       true;
-        runTests["testSwap1"]                               =       true;
-        runTests["testSwap2"]                               =       true;
-        runTests["testSwap3"]                               =       true;
-        runTests["testSwapExactTokensForTokens"]            =       true;
-        runTests["testSwapTokensForExactTokens"]            =       true;
+        runTests["testOracle"]                              =       false;
+        runTests["testPerp"]                                =       false;
+        runTests["testMint"]                                =       false;
+        runTests["testSwap1"]                               =       false;
+        runTests["testSwap2"]                               =       false;
+        runTests["testSwap3"]                               =       false;
+        runTests["testSwapExactTokensForTokens"]            =       false;
+        runTests["testSwapTokensForExactTokens"]            =       false;
         runTests["testSwapExactETHForTokens"]               =       true;
         
 
@@ -432,25 +432,16 @@ contract ContractTest is DSTest {
 
         setUpForSwap();
 
-        d.askForMoney(address(d.weth()), 10e18);
+        // d.askForMoney(address(d.weth()), 10e18);
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
 
-        d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
-        // sToken memory tokenIn = sToken({
-        //     token: d.weth(), 
-        //     amount: 0
-        // });
+        // d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
 
-        // sToken memory tokenOut = sToken({
-        //     token: d.wbtc(), 
-        //     amount: 1e15
-        // });
-
-        address[] memory path = new address[](2);
-        path[0] = address(d.weth());
-        path[1] = address(d.wbtc());
+        address[] memory path = new address[](1);
+        // path[0] = address(d.weth());
+        path[0] = address(d.wbtc());
 
         uint256 amountIn = 1e18;
         uint256 expectedAmount = d.lemmaSwap().getAmountsOut(
@@ -464,31 +455,14 @@ contract ContractTest is DSTest {
             })
         );
 
-        d.lemmaSwap().swapExactTokensForTokens(
-            amountIn,
+        d.lemmaSwap().swapExactETHForTokens{value: amountIn}(
             0,
             path,
             address(this),
             0
         );
-
-        // console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
-        // console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
-        // console.log("Final WETH Balance = ", d.usdl().balanceOf(address(this)));
-
-        // console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this)));
-        // console.log("wbtcInitialBalance = ", wbtcInitialBalance);
-        // console.log("tokenOut.amount = ", tokenOut.amount);
-        // console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount);
-
-        // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount);
-
-        // console.log("d.weth().balanceOf(address(this)) = ", d.weth().balanceOf(address(this)));
-        // console.log("wethInitialBalance = ", wethInitialBalance);
-        // console.log("d.lemmaSwap().getAmountsIn(tokenIn, tokenOut) = ", d.lemmaSwap().getAmountsIn(tokenIn, tokenOut));
-        // console.log("Delta = ", wethInitialBalance - d.lemmaSwap().getAmountsIn(tokenIn, tokenOut));
-
-        assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn );
+        
+        // assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn );
         assertTrue( d.wbtc().balanceOf(address(this)) == expectedAmount );
     }
 
