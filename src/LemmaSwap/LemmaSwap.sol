@@ -79,6 +79,14 @@ contract LemmaSwap {
         lemmaSwapFees = _fees;
     }
 
+    function getProtocolFeesCoeffTokenIn() public view returns(uint256) {
+        return (lemmaSwapFees / 2);
+    }
+
+    function getProtocolFeesCoeffTokenOut() public view returns(uint256) {
+        return (lemmaSwapFees / 2);
+    }
+
     function getProtocolFeesTokenIn(sToken memory token) public view returns(uint256) {
         return token.amount * (lemmaSwapFees / 2) / 1e6;
     }
@@ -206,19 +214,32 @@ contract LemmaSwap {
 
 
     function getAmountsIn(sToken memory tokenIn, sToken memory tokenOut) public view returns(uint256) {
-        uint256 totalCollateralOutRequired = tokenOut.amount + getProtocolFeesTokenOut(tokenOut);
+        console.log("[getAmountsIn()] tokenOut.amount = ", tokenOut.amount);
+        uint256 totalCollateralOutRequired = tokenOut.amount * 1e6 / (1e6 - getProtocolFeesCoeffTokenOut());
+        // uint256 totalCollateralOutRequired = tokenOut.amount + getProtocolFeesTokenOut(tokenOut);
+        console.log("[getAmountsIn()] totalCollateralOutRequired = ", totalCollateralOutRequired);
         uint256 totalUSDLRequired = usdl.Collateral2USDL(address(tokenOut.token), totalCollateralOutRequired);
+        console.log("[getAmountsIn()] totalUSDLRequired = ", totalUSDLRequired);
         uint256 totalCollateralInRequired = usdl.USDL2Collateral(address(tokenIn.token), totalUSDLRequired);
-        return totalCollateralInRequired + getProtocolFeesTokenIn(sToken({token: tokenIn.token, amount: totalCollateralInRequired}));
+        console.log("[getAmountsIn()] totalCollateralInRequired = ",totalCollateralInRequired);
+        uint256 res = totalCollateralInRequired * 1e6 / (1e6 - getProtocolFeesCoeffTokenIn());
+        // uint256 res = totalCollateralInRequired + getProtocolFeesTokenIn(sToken({token: tokenIn.token, amount: totalCollateralInRequired}));
+        console.log("[getAmountsIn()] res = ", res);
+        return res;
     }
 
 
     function getAmountsOut(sToken memory tokenIn, sToken memory tokenOut) public view returns(uint256) {
+        console.log("[getAmountsOut()] tokenIn.amount = ", tokenIn.amount);
         uint256 netCollateralInAmount = tokenIn.amount - getProtocolFeesTokenIn(tokenIn);
+        console.log("[getAmountsOut()] netCollateralInAmount = ", netCollateralInAmount);
         uint256 netUSDLAmount = usdl.Collateral2USDL(address(tokenIn.token), netCollateralInAmount);
+        console.log("[getAmountsOut()] netUSDLAmount = ", netUSDLAmount);
         uint256 totalCollateralOutAmount = usdl.USDL2Collateral(address(tokenOut.token), netUSDLAmount);
-        // tokenOut.amount = totalCollateralOutAmount;
-        return totalCollateralOutAmount - getProtocolFeesTokenOut(sToken({token: tokenOut.token, amount: totalCollateralOutAmount}));
+        console.log("[getAmountsOut()] totalCollateralOutAmount = ", totalCollateralOutAmount);
+        uint256 res = totalCollateralOutAmount - getProtocolFeesTokenOut(sToken({token: tokenOut.token, amount: totalCollateralOutAmount}));
+        console.log("[getAmountsOut()] res = ", res);
+        return res;
     }
 
 
