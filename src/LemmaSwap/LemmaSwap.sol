@@ -44,6 +44,9 @@ contract LemmaSwap {
         // usdl.approve(address(lemmaRouter), type(uint256).max);
     }
 
+    event Fallback(address, uint256);
+    event Receive(address, uint256);
+
     modifier onlyOwner() {
         require(msg.sender == owner, "!owner");
         _;
@@ -57,6 +60,14 @@ contract LemmaSwap {
     modifier validFees(uint256 fees) {
         require(fees <= 1e6, "!fees");
         _;
+    }
+
+    fallback() external payable { 
+        emit Fallback((msg.sender), msg.value);
+    }
+
+    receive() external payable {
+        emit Receive((msg.sender), msg.value);
     }
 
     function _returnAllTokens(IERC20 token, address to) internal {
@@ -173,7 +184,8 @@ contract LemmaSwap {
         returns (uint256[] memory amounts) {
             uint256 amountIn = msg.value;
             console.log("[swapExactETHForTokens] msg.value = ", msg.value);
-            weth.deposit{value: amountIn}();
+            TransferHelper.safeTransferETH(address(weth), amountIn);
+            // weth.deposit{value: amountIn}();
             console.log("[swapExactETHForTokens] After Deposit Balance = ", weth.balanceOf(address(this)));
             require(path.length == 1, "! Multi-hop swap not supported yet");
             uint256[] memory res = new uint256[](1);
@@ -192,10 +204,28 @@ contract LemmaSwap {
             return res;
         }
 
-    function swapTokensForExactETH(uint256 amountOut, uint256 amountInMax, address[] calldata path, address to, uint256 deadline)
-        external
+    // Working On
+    function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
+        external 
         returns (uint256[] memory amounts) {
-
+            require(path.length == 1, "! Multi-hop swap not supported yet");
+            uint256[] memory res = new uint256[](1);
+            res[0] = swapWithExactOutput(
+                sToken({
+                    token: IERC20(path[0]),
+                    amount: amountInMax
+                }), 
+                sToken({
+                    token: weth,
+                    amount: amountOut
+                }),
+                address(this)
+                );
+            require(weth.balanceOf(address(this)) == amountOut, "! T111");
+            console.log("[swapTokensForExactETH] WETH Balance = ", weth.balanceOf(address(this)));
+            weth.withdraw(amountOut);
+            TransferHelper.safeTransferETH(to, amountOut);
+            return res;
         }
 
     function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to, uint256 deadline)

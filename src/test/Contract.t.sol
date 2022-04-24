@@ -50,12 +50,22 @@ contract ContractTest is DSTest {
         runTests["testSwapExactTokensForTokens"]            =       false;
         runTests["testSwapTokensForExactTokens"]            =       false;
         runTests["testSwapExactETHForTokens"]               =       true;
-        
+        runTests["testswapTokensForExactETH"]               =       true;        
+    }
 
+    // fallback() external payable { 
+    //     console.log("[ContractTest] Fallback");
+    // }
+
+    receive() external payable {
+        console.log("[ContractTest] Receive");
+        // assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
     }
 
     function setUp() public {
         d = new Deployment();
+        TransferHelper.safeTransferETH(address(d), 100e18);
+        d.deploy();
     }
 
 
@@ -78,6 +88,10 @@ contract ContractTest is DSTest {
         uint256 priceNow = oracle.getPriceNow(address(d.weth()), Denominations.USD);
         console.log("Price Now is ", priceNow);
         assertTrue(priceNow == 100e18);
+    }
+
+    function testPayable() public {
+        TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
     }
 
     function testPerp() public {
@@ -327,8 +341,8 @@ contract ContractTest is DSTest {
 
 
 
-    function testSwapTokensForExactTokens() public {
-        if (!runTests["testSwapTokensForExactTokens"]) {
+    function testswapTokensForExactTokens() public {
+        if (!runTests["testswapTokensForExactTokens"]) {
             assertTrue(true);
             return;
         }
@@ -415,6 +429,9 @@ contract ContractTest is DSTest {
         assertTrue( d.wbtc().balanceOf(address(this)) == (wbtcInitialBalance + expectedAmount) );
     }
 
+
+
+
     // function testExample() public {
     //     uint256 test = 5656565656;
     //     console.log("The tx.origin is ", tx.origin);
@@ -461,10 +478,100 @@ contract ContractTest is DSTest {
             address(this),
             0
         );
-        
+
         // assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn );
         assertTrue( d.wbtc().balanceOf(address(this)) == expectedAmount );
     }
+
+    function testswapTokensForExactETH() public {
+        if (!runTests["testswapTokensForExactETH"]) {
+            assertTrue(true);
+            return;
+        }
+
+        setUpForSwap();
+
+        d.askForMoney(address(d.wbtc()), 10e18);
+
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
+
+        d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
+        // sToken memory tokenIn = sToken({
+        //     token: d.weth(), 
+        //     amount: 0
+        // });
+
+        // sToken memory tokenOut = sToken({
+        //     token: d.wbtc(), 
+        //     amount: 1e15
+        // });
+
+        address[] memory path = new address[](1);
+        // path[0] = address(d.weth());
+        path[0] = address(d.wbtc());
+
+        uint256 amountOut = 1e15;
+        uint256 expectedAmount = amountOut;
+        // uint256 expectedAmountIn = d.lemmaSwap().getAmountsIn(
+        //     sToken({
+        //         token: d.weth(),
+        //         amount: 0
+        //     }), 
+        //     sToken({
+        //         token: d.wbtc(),
+        //         amount: amountOut
+        //     })
+        // );
+
+        // uint256 expectedAmountOut = d.lemmaSwap().getAmountsOut(
+        //     sToken({
+        //         token: d.weth(),
+        //         amount: expectedAmountIn
+        //     }), 
+        //     sToken({
+        //         token: d.wbtc(),
+        //         amount: 0
+        //     })
+        // );
+
+        // console.log("T333 expectedAmountOut = ", expectedAmountOut);
+        // console.log("T333 expectedAmount = ", expectedAmount);
+        // assertTrue( expectedAmountOut == expectedAmount );
+
+        d.lemmaSwap().swapTokensForExactETH(
+            amountOut,
+            type(uint256).max,
+            path,
+            address(this),
+            0
+        );
+
+        console.log("d.wbtc().balanceOf(address(this)) ", d.wbtc().balanceOf(address(this)));
+        console.log("wbtcInitialBalance ", wbtcInitialBalance);
+        console.log("expectedAmount ", expectedAmount);
+
+        // console.log("Final WETH Balance = ", d.weth().balanceOf(address(this)));
+        // console.log("Final WBTC Balance = ", d.wbtc().balanceOf(address(this)));
+        // console.log("Final WETH Balance = ", d.usdl().balanceOf(address(this)));
+
+        // console.log("d.wbtc().balanceOf(address(this)) = ", d.wbtc().balanceOf(address(this)));
+        // console.log("wbtcInitialBalance = ", wbtcInitialBalance);
+        // console.log("tokenOut.amount = ", tokenOut.amount);
+        // console.log("wbtcInitialBalance + tokenOut.amount = ", wbtcInitialBalance + tokenOut.amount);
+
+        // console.log("d.wbtc().balanceOf(address(this)) = %d, wbtcInitialBalance = %d, tokenOut.amount = %d, tot = %d", d.wbtc().balanceOf(address(this)), wbtcInitialBalance, tokenOut.amount, wbtcInitialBalance + tokenOut.amount);
+
+        // console.log("d.weth().balanceOf(address(this)) = ", d.weth().balanceOf(address(this)));
+        // console.log("wethInitialBalance = ", wethInitialBalance);
+        // console.log("d.lemmaSwap().getAmountsIn(tokenIn, tokenOut) = ", d.lemmaSwap().getAmountsIn(tokenIn, tokenOut));
+        // console.log("Delta = ", wethInitialBalance - d.lemmaSwap().getAmountsIn(tokenIn, tokenOut));
+
+        // assertTrue( d.weth().balanceOf(address(this)) == (wethInitialBalance - expectedAmountIn) );
+        // assertTrue( d.wbtc().balanceOf(address(this)) == (wbtcInitialBalance + expectedAmount) );
+    }
+
+
 
 
 

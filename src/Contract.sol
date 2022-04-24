@@ -39,10 +39,16 @@ contract Deployment {
     MockUSDL public usdl;
     LemmaSwap public lemmaSwap;
     IWETH10 public weth;
+
+    fallback() external payable {}
+    receive() external payable {}
     
-    constructor() {
+    function deploy() external {
         // weth = new Collateral("WETH", "WETH", 100e18);
-        weth = IWETH10(address(new MyWETH(100e18)));
+        weth = new WETH10();
+        // TransferHelper.safeTransferETH(address(weth), 10e18);
+        weth.deposit{value: 100e18}();
+        // weth = IWETH10(address(new MyWETH(100e18)));
         wbtc = IERC20(address(new Collateral("WBTC", "WBTC", 100e18)));
         oracle = new MockOracle();
         oracle.setPriceNow(address(weth), Denominations.USD, 100e18);
