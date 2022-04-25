@@ -41,6 +41,16 @@ forge install Uniswap/v3-periphery
 forge install Openzeppelin/openzeppelin-contracts
 ```
 
+Change the branch to `solc-0.7` for the compatibility with the Solidity Version used in the rest of the contracts running 
+
+```
+cd lib/openzeppelin-contracts/
+git checkout solc-0.7
+cd ../..
+```
+
+
+
 
 
 1.2.4 Install Solmate 
