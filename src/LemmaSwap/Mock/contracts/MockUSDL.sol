@@ -118,6 +118,9 @@ contract MockUSDL is ERC20 {
     ) public {
         uint256 collateralAmount = USDL2Collateral(address(collateral), amount);
         uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
+        if(collateral.allowance(address(this), address(mockPerp)) != type(uint256).max) {
+            collateral.approve(address(mockPerp), type(uint256).max);
+        }
         // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
         TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);

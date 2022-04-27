@@ -97,18 +97,18 @@ contract ContractTest is DSTest {
         TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
     }
 
-    function testPerp() public {
-        if (!runTests["testPerp"]) {
-            assertTrue(true);
-            return;
-        }
+    // function testPerp() public {
+    //     if (!runTests["testPerp"]) {
+    //         assertTrue(true);
+    //         return;
+    //     }
 
-        MockPerp perp = d.perp();
-        uint256 amount = 1e18;
-        uint256 expectedAmount = amount - (perp.feeOpenShort_1e6() * amount / 1e6);
-        perp.openShort1XWExactCollateral(address(d.weth()), amount);
-        assertTrue( perp.shorts(address(this), address(d.weth()), Denominations.USD) == expectedAmount );
-    }
+    //     MockPerp perp = d.perp();
+    //     uint256 amount = 1e18;
+    //     uint256 expectedAmount = amount - (perp.feeOpenShort_1e6() * amount / 1e6);
+    //     perp.openShort1XWExactCollateral(address(d.weth()), amount);
+    //     assertTrue( perp.shorts(address(this), address(d.weth()), Denominations.USD) == expectedAmount );
+    // }
 
 
     function testMint() public {

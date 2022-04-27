@@ -58,7 +58,7 @@ contract Deployment {
         perpTreasury = new MockPerpTreasury();
 
         perp = new MockPerp(
-            IMockOracle(address(oracle)),
+            // IMockOracle(address(oracle)),
             address(perpTreasury),
             1000,   // feeOpenShort = 0.1% 
             1000    // feeCloseShort = 0.1%
@@ -73,6 +73,9 @@ contract Deployment {
         );
 
         // Prices are fixed
+        perp.setPrice(address(weth), 100e18);
+        perp.setPrice(address(wbtc), 50e18);
+
         usdl.setPrice(address(weth), 100e18);
         usdl.setPrice(address(wbtc), 50e18);
 
