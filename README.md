@@ -61,6 +61,14 @@ forge install Rari-Capital/solmate
 
 
 
+1.2.5 Install Gnosis Util Contracts 
+
+```
+forge install gnosis/util-contracts
+```
+
+
+
 2. Initialize Foundry Project with 
 
 ```
