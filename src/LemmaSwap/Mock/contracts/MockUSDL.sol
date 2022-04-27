@@ -95,15 +95,16 @@ contract MockUSDL is ERC20 {
     function _takeFees(uint256 dexIndex, IERC20 collateral, uint256 amount, bool isMinting) internal returns(uint256) {
         if (msg.sender == lemmaSwap) return amount;
         uint256 absFees = getLemmaFees(dexIndex, collateral, amount, isMinting);
+        TransferHelper.safeTransfer(address(collateral), address(lemmaTreasury), absFees);
 
-        // // If minting, we take fees from the input collateral 
-        // // If redeeming, first we get collateral to this contract and then take the fees from ourselves before transfering the rest to the `to` address
-        if(isMinting) {
-            TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(lemmaTreasury), absFees);            
-        }
-        else {
-            TransferHelper.safeTransfer(address(collateral), address(lemmaTreasury), absFees);
-        }
+        // // // If minting, we take fees from the input collateral 
+        // // // If redeeming, first we get collateral to this contract and then take the fees from ourselves before transfering the rest to the `to` address
+        // if(isMinting) {
+        //     TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(lemmaTreasury), absFees); 
+        // }
+        // else {
+        //     TransferHelper.safeTransfer(address(collateral), address(lemmaTreasury), absFees);
+        // }
 
         return amount - absFees;
     }
@@ -116,14 +117,17 @@ contract MockUSDL is ERC20 {
         IERC20 collateral,
         bool isLemmaSwap
     ) public {
+        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), collateralAmount); 
         uint256 collateralAmount = USDL2Collateral(address(collateral), amount);
-        uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
         if(collateral.allowance(address(this), address(mockPerp)) != type(uint256).max) {
             collateral.approve(address(mockPerp), type(uint256).max);
         }
+        uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
         // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
         // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
-        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
+        uint256 vUSDAmount = mockPerp.openShort1XWExactCollateral(address(collateral), netCollateralAmount); 
+        // TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
+        require(amount == vUSDAmount, "! vUSDAmount");
         _mint(to, amount);  
     }
 
@@ -136,15 +140,22 @@ contract MockUSDL is ERC20 {
         uint256 minUSDLToMint,
         IERC20 collateral
     ) external {
-        uint256 netCollateral = _takeFees(0, collateral, collateralAmount, true);
+        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), collateralAmount); 
+        if(collateral.allowance(address(this), address(mockPerp)) != type(uint256).max) {
+            collateral.approve(address(mockPerp), type(uint256).max);
+        }
 
-        // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
-        // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
+        uint256 netCollateralAmount = _takeFees(0, collateral, collateralAmount, true);
 
-        // uint256 netCollateral = collateralAmount - fees;
-        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateral);
+        uint256 usdlToMint = mockPerp.openShort1XWExactCollateral(address(collateral), netCollateralAmount); 
 
-        uint256 usdlToMint = Collateral2USDL(address(collateral), netCollateral);
+        // // uint256 fees = collateralAmount * feesUSDLMint / 1e6; 
+        // // TransferHelper.safeTransferFrom(address(collateral), msg.sender, lemmaTreasury, fees);
+
+        // // uint256 netCollateral = collateralAmount - fees;
+        // TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
+
+        // uint256 usdlToMint = Collateral2USDL(address(collateral), netCollateralAmount);
         require(usdlToMint > minUSDLToMint, "! minUSDLToMint");
         _mint(to, usdlToMint);
     }

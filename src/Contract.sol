@@ -60,8 +60,8 @@ contract Deployment {
         perp = new MockPerp(
             // IMockOracle(address(oracle)),
             address(perpTreasury),
-            1000,   // feeOpenShort = 0.1% 
-            1000    // feeCloseShort = 0.1%
+            0, // 1000,   // feeOpenShort = 0.1% 
+            0 // 1000    // feeCloseShort = 0.1%
         );
 
         lemmaTreasury = new MockLemmaTreasury();

@@ -14,6 +14,21 @@ import "forge-std/console.sol";
 
 contract MockPerpTreasury {}
 
+
+contract MockVault {
+    address public perp;
+
+    function setPerp(address _perp) external {
+        perp = _perp;
+    }
+
+    function withdraw(IERC20 collateral, uint256 amount) {
+        require(msg.sender == perp, "! onlyPerp");
+        TransferHelper.safeTransfer(collateral, perp, amount); 
+    }
+
+}
+
 // Assumptions 
 // quoteToken = vUSD 
 // baseToken = Collateral in 1e18 format
@@ -28,6 +43,8 @@ contract MockPerp {
 
     address public perpTreasury;
 
+    MockVault vault;
+
     // address public defaultQuoteToken;
 
     // trader --> collateral --> amount
@@ -40,17 +57,18 @@ contract MockPerp {
     event Withdrawn(address, address, uint256, uint256, uint256);
 
 
-    constructor(address _perpTreasury, uint256 _feeOpenShort_1e6, uint256 _feeCloseShort_1e6) {
+    constructor(address _perpTreasury, address _vault, uint256 _feeOpenShort_1e6, uint256 _feeCloseShort_1e6) {
         // oracle = _oracle;
         feeOpenShort_1e6 = _feeOpenShort_1e6;
         feeCloseShort_1e6 = _feeCloseShort_1e6;
         // defaultQuoteToken = Denominations.USD;
         perpTreasury = _perpTreasury;
+        vault = _vault;
     }
 
     function _takeFees(address collateral, uint256 amount, bool isOpenShort) internal returns(uint256) {
         uint256 absFees = ((isOpenShort) ? feeOpenShort_1e6 : feeCloseShort_1e6) * amount / 1e6;
-        TransferHelper.safeTransferFrom(collateral, msg.sender, address(perpTreasury), absFees); 
+        TransferHelper.safeTransferFrom(collateral, address(this), address(perpTreasury), absFees); 
         return amount - absFees;
     }
 
@@ -75,11 +93,39 @@ contract MockPerp {
 
     function openShort1XWExactCollateral(address collateral, uint256 amount) external returns(uint256) {
         require(price[collateral] != 0, "Unsupported Collateral");
+        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), amount);
         uint256 netCollateralAmount = _takeFees(collateral, amount, true);
-        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
+        TransferHelper.safeTransfer(address(collateral), address(vault), netCollateralAmount);
         short_collateral[msg.sender][collateral] += netCollateralAmount;
         uint256 vUSDAmount = netCollateralAmount * 1e18 / price[address(collateral)];
         short_vUSD[msg.sender] += vUSDAmount;
+        return vUSDAmount;
+
+        // shorts[msg.sender][collateral][defaultQuoteToken] += netCollateralAmount;
+
+        // if (shorts[msg.sender][collateral][defaultQuoteToken] > 0) {
+        //     // Need to compute PnL on the current position
+        //     shorts[msg.sender][collateral][defaultQuoteToken] = computeUpdatedCollateralAmount(
+        //         oracle.getPriceNow(collateral, defaultQuoteToken),
+        //         openPrice[msg.sender][collateral][defaultQuoteToken],
+        //         shorts[msg.sender][collateral][defaultQuoteToken],
+        //         true
+        //     );
+        // }
+
+    }
+
+
+    function closeShort1XWExactCollateral(address collateral, uint256 amount) external returns(uint256) {
+        require(price[collateral] != 0, "Unsupported Collateral");
+        require(short_collateral[msg.sender][collateral] >= amount, "! enough collateral");
+        vault.withdraw(collateral, amount);
+        short_collateral[msg.sender][collateral] -= amount;
+        uint256 netCollateralAmount = _takeFees(collateral, amount, true);
+        TransferHelper.safeTransferFrom(address(collateral), msg.sender, address(this), netCollateralAmount);
+        short_collateral[msg.sender][collateral] -= netCollateralAmount;
+        uint256 vUSDAmount = netCollateralAmount * 1e18 / price[address(collateral)];
+        // short_vUSD[msg.sender] += vUSDAmount;
         return vUSDAmount;
 
         // shorts[msg.sender][collateral][defaultQuoteToken] += netCollateralAmount;
