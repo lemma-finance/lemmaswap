@@ -3,7 +3,7 @@
 
 import {MockOracle} from "./LemmaSwap/Mock/contracts/MockOracle.sol";
 import {IMockOracle} from "./LemmaSwap/Mock/interfaces/IMockOracle.sol";
-import {MockPerp} from "./LemmaSwap/Mock/contracts/MockPerp.sol";
+import {MockPerpTreasury, MockPerp} from "./LemmaSwap/Mock/contracts/MockPerp.sol";
 import {MockLemmaTreasury, MockUSDL} from "./LemmaSwap/Mock/contracts/MockUSDL.sol";
 import {Denominations} from "./LemmaSwap/Mock/libs/Denominations.sol";
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
@@ -36,6 +36,7 @@ contract Deployment {
     // Collateral public weth;
     IERC20 public wbtc;
     MockLemmaTreasury public lemmaTreasury;
+    MockPerpTreasury public perpTreasury;
     MockUSDL public usdl;
     LemmaSwap public lemmaSwap;
     IWETH10 public weth;
@@ -54,8 +55,11 @@ contract Deployment {
         oracle.setPriceNow(address(weth), Denominations.USD, 100e18);
         oracle.setPriceNow(address(wbtc), Denominations.USD, 120e18);
 
+        perpTreasury = new MockPerpTreasury();
+
         perp = new MockPerp(
             IMockOracle(address(oracle)),
+            address(perpTreasury),
             1000,   // feeOpenShort = 0.1% 
             1000    // feeCloseShort = 0.1%
         );
@@ -64,9 +68,11 @@ contract Deployment {
         usdl = new MockUSDL(
             "USDL",
             "USDL",
-            address(lemmaTreasury)
+            address(lemmaTreasury),
+            address(perp)
         );
 
+        // Prices are fixed
         usdl.setPrice(address(weth), 100e18);
         usdl.setPrice(address(wbtc), 50e18);
 

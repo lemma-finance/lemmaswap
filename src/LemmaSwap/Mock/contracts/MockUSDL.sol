@@ -5,12 +5,14 @@ import {Multicall} from '@uniswap/v3-periphery/contracts/base/Multicall.sol';
 import {IWETH9} from '@uniswap/v3-periphery/contracts/interfaces/external/IWETH9.sol';
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from '@weth10/interfaces/IERC20.sol';
+import {MockPerp} from "./MockPerp.sol";
 // import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 // import "../interfaces/IUSDLMock.sol";
 // import "../interfaces/IPermit.sol";
 // import "../interfaces/ILemmaRouter.sol";
 import "forge-std/console.sol";
+
 
 
 
@@ -23,7 +25,7 @@ contract MockLemmaTreasury {}
 contract MockUSDL is ERC20 {
 
     address public lemmaTreasury;
-    address public mockPerp;
+    MockPerp public mockPerp;
     address public lemmaSwap;
 
     uint256 feesUSDLMint;
@@ -42,9 +44,11 @@ contract MockUSDL is ERC20 {
     constructor(
         string memory name,
         string memory symbol,
-        address _mockLemmaTreasury
+        address _mockLemmaTreasury,
+        address _mockPerp
     ) ERC20(name, symbol) {
         lemmaTreasury = _mockLemmaTreasury; 
+        mockPerp = MockPerp(_mockPerp);
         // _mint(msg.sender, initialSupply);
 
 

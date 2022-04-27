@@ -10,6 +10,10 @@ import {Denominations} from "../libs/Denominations.sol";
 // import "./interfaces/IPermit.sol";
 import "forge-std/console.sol";
 
+
+
+contract MockPerpTreasury {}
+
 // Assumptions 
 // quoteToken = vUSD 
 // baseToken = Collateral in 1e18 format
@@ -18,6 +22,8 @@ contract MockPerp {
     IMockOracle public oracle;
     uint256 public feeOpenShort_1e6;
     uint256 public feeCloseShort_1e6;
+
+    address public perpTreasury;
 
     address public defaultQuoteToken;
 
@@ -29,11 +35,12 @@ contract MockPerp {
     event Withdrawn(address, address, uint256, uint256, uint256);
 
 
-    constructor(IMockOracle _oracle, uint256 _feeOpenShort_1e6, uint256 _feeCloseShort_1e6) {
+    constructor(IMockOracle _oracle, address _perpTreasury, uint256 _feeOpenShort_1e6, uint256 _feeCloseShort_1e6) {
         oracle = _oracle;
         feeOpenShort_1e6 = _feeOpenShort_1e6;
         feeCloseShort_1e6 = _feeCloseShort_1e6;
         defaultQuoteToken = Denominations.USD;
+        perpTreasury = _perpTreasury;
     }
 
 
@@ -55,15 +62,15 @@ contract MockPerp {
         uint256 feeAmount = amount * feeOpenShort_1e6 / 1e6;
         uint256 netAmount = amount - feeAmount;
 
-        if (shorts[msg.sender][collateral][defaultQuoteToken] > 0) {
-            // Need to compute PnL on the current position
-            shorts[msg.sender][collateral][defaultQuoteToken] = computeUpdatedCollateralAmount(
-                oracle.getPriceNow(collateral, defaultQuoteToken),
-                openPrice[msg.sender][collateral][defaultQuoteToken],
-                shorts[msg.sender][collateral][defaultQuoteToken],
-                true
-            );
-        }
+        // if (shorts[msg.sender][collateral][defaultQuoteToken] > 0) {
+        //     // Need to compute PnL on the current position
+        //     shorts[msg.sender][collateral][defaultQuoteToken] = computeUpdatedCollateralAmount(
+        //         oracle.getPriceNow(collateral, defaultQuoteToken),
+        //         openPrice[msg.sender][collateral][defaultQuoteToken],
+        //         shorts[msg.sender][collateral][defaultQuoteToken],
+        //         true
+        //     );
+        // }
 
         shorts[msg.sender][collateral][defaultQuoteToken] += netAmount;
     }
