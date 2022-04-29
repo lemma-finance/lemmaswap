@@ -2,8 +2,8 @@ pragma solidity ^0.7.6;
 // pragma abicoder v2;
 
 import {IQuoter} from "./interfaces/IQuoter.sol";
+import {StorageAccessible} from "@util-contracts/contracts/storage/StorageAccessible.sol";
 import "forge-std/console.sol";
-
 
 
 
@@ -12,10 +12,18 @@ interface IUSDLemmaForPrice {
     function Collateral2USDL(address collateral, uint256 amount) external view returns (uint256);
 }
 
-contract LocalQuoter is IQuoter {
+contract Quoter is IQuoter {
     // Converts USDL amount to Collateral amount at oracle price
 
     IUSDLemmaForPrice public usdl;
+
+    // 0 --> MockUSDL 
+    // 1 --> Sim with Real USDL 
+    uint256 mode;
+
+    function setMode(uint256 _mode) external override {
+        mode = _mode;
+    }
 
     function setUSDLemma(address _usdl) external {
         usdl = IUSDLemmaForPrice(_usdl);
@@ -29,4 +37,8 @@ contract LocalQuoter is IQuoter {
         usdl.Collateral2USDL(collateral, amount);
     }
 }
+
+
+
+
 
