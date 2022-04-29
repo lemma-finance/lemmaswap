@@ -5,6 +5,7 @@ import {MockOracle} from "./LemmaSwap/Mock/contracts/MockOracle.sol";
 import {IMockOracle} from "./LemmaSwap/Mock/interfaces/IMockOracle.sol";
 import {MockPerp} from "./LemmaSwap/Mock/contracts/MockPerp.sol";
 import {MockLemmaTreasury, MockUSDL} from "./LemmaSwap/Mock/contracts/MockUSDL.sol";
+import {LocalQuoter} from "./LemmaSwap/lib/Quoter.sol";
 import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
 import {Denominations} from "./LemmaSwap/Mock/libs/Denominations.sol";
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
@@ -40,6 +41,7 @@ contract Deployment {
     // Collateral public weth;
     IERC20 public wbtc;
     MockLemmaTreasury public lemmaTreasury;
+    LocalQuoter public localQuoter;
     MockUSDL public usdl;
     LemmaSwap public lemmaSwap;
     IWETH10 public weth;
@@ -89,10 +91,13 @@ contract Deployment {
             address(lemmaTreasury)
         );
 
+        localQuoter = new LocalQuoter();
+        localQuoter.setUSDLemma(address(usdl));
+
         usdl.setPrice(address(weth), 100e18);
         usdl.setPrice(address(wbtc), 50e18);
 
-        lemmaSwap = new LemmaSwap(address(usdl), address(weth));
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth), address(localQuoter));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
@@ -123,10 +128,13 @@ contract Deployment {
             address(lemmaTreasury)
         );
 
+        localQuoter = new LocalQuoter();
+        localQuoter.setUSDLemma(address(usdl));
+
         usdl.setPrice(address(weth), 100e18);
         usdl.setPrice(address(wbtc), 50e18);
 
-        lemmaSwap = new LemmaSwap(address(usdl), address(weth));
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth), address(localQuoter));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 

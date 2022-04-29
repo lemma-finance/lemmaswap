@@ -8,6 +8,8 @@ import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
 import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
+
+import {IQuoter} from "./lib/interfaces/IQuoter.sol";
 // import "../interfaces/IUSDLemma.sol";
 import "../interfaces/IPermit.sol";
 import "../interfaces/ILemmaRouter.sol";
@@ -27,16 +29,19 @@ contract LemmaSwap {
     // Fees in 1e6 format: 1e6 is 100% 
     uint256 public lemmaSwapFees; 
 
+    IQuoter quoter;
+
 
     IWETH10 public weth;
 
     constructor(
         // ILemmaRouter _lemmaRouter, 
-        address _usdl, address _weth) {
+        address _usdl, address _weth, address _quoter) {
         owner = msg.sender;
         // lemmaRouter = _lemmaRouter; 
         usdl = IUSDLSwapSubset(_usdl);
         weth = IWETH10(_weth);
+        quoter = IQuoter(_quoter);
 
         // The standard is 0.1% 
         lemmaSwapFees = 1000;
