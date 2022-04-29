@@ -54,6 +54,8 @@ contract Deployment {
         address USDLemma;
     }
 
+    // Take Addresses from 
+    // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L36
     s_testnet public testnet_optimism_kovan;
 
     constructor() {
