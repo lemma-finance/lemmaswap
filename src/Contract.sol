@@ -5,6 +5,7 @@ import {MockOracle} from "./LemmaSwap/Mock/contracts/MockOracle.sol";
 import {IMockOracle} from "./LemmaSwap/Mock/interfaces/IMockOracle.sol";
 import {MockPerp} from "./LemmaSwap/Mock/contracts/MockPerp.sol";
 import {MockLemmaTreasury, MockUSDL} from "./LemmaSwap/Mock/contracts/MockUSDL.sol";
+import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
 import {Denominations} from "./LemmaSwap/Mock/libs/Denominations.sol";
 import {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from '@weth10/interfaces/IERC20.sol';
@@ -66,7 +67,7 @@ contract Deployment {
         weth = IWETH10(testnet.WETH);
         TransferHelper.safeTransferETH(address(weth), 100e18);
         // weth.deposit{value: 100e18}();
-        console.log("[deployTestnet()] WETH Balance = ", weth.balanceOf(address(this)));
+        // console.log("[deployTestnet()] WETH Balance = ", weth.balanceOf(address(this)));
         // weth = IWETH10(address(new MyWETH(100e18)));
         wbtc = IERC20(address(new Collateral("WBTC", "WBTC", 100e18)));
         oracle = new MockOracle();

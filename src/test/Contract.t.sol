@@ -62,10 +62,6 @@ contract ContractTest is DSTest {
         
     }
 
-    // fallback() external payable { 
-    //     console.log("[ContractTest] Fallback");
-    // }
-
     receive() external payable {
         console.log("[ContractTest] Receive");
         // assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
