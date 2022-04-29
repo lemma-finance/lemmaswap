@@ -40,6 +40,10 @@ contract ContractTest is DSTest {
     Deployment public d;
     mapping(string => bool) public runTests;
 
+    // 0 --> Local Deploy 
+    // 1 --> Optimism Kovan
+    uint256 mode;
+
     constructor() DSTest() {
         runTests["testOracle"]                              =       true;
         runTests["testPerp"]                                =       true;
@@ -53,6 +57,8 @@ contract ContractTest is DSTest {
         runTests["testswapTokensForExactETH"]               =       true;        
         runTests["testSwapExactTokensForETH"]               =       true; 
         runTests["testSwapETHForExactTokens"]               =       true; 
+
+        mode = 1;
         
     }
 
@@ -68,9 +74,14 @@ contract ContractTest is DSTest {
     function setUp() public {
         d = new Deployment();
         TransferHelper.safeTransferETH(address(d), 100e18);
-        d.deploy();
-    }
 
+        if(mode == 0) {
+            d.deployLocal();
+        } else {
+            d.deployTestnet(mode);
+        }
+
+    }
 
     // Let's put some collateral 
     function setUpForSwap() public {

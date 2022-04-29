@@ -14,6 +14,9 @@ import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/Transfer
 import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 // import {ERC20} from "solmate/tokens/ERC20.sol";
 
+
+import "forge-std/console.sol";
+
 contract Collateral is ERC20 {
     constructor(
         string memory name,
@@ -24,11 +27,11 @@ contract Collateral is ERC20 {
     }
 }
 
-contract MyWETH is WETH10 {
-    constructor(uint256 initialSupply) WETH10() {
-        balanceOf[msg.sender] += initialSupply;
-    }
-}
+// contract MyWETH is WETH10 {
+//     constructor(uint256 initialSupply) WETH10() {
+//         balanceOf[msg.sender] += initialSupply;
+//     }
+// }
 
 contract Deployment {
     MockOracle public oracle;
@@ -42,8 +45,58 @@ contract Deployment {
 
     fallback() external payable {}
     receive() external payable {}
+
+    struct s_testnet {
+        address WETH;
+    }
+
+    s_testnet public testnet_optimism_kovan;
+
+    constructor() {
+        testnet_optimism_kovan.WETH = address(0x4200000000000000000000000000000000000006);
+    }
+
+
+    function deployTestnet(uint256 mode) external {
+        s_testnet memory testnet;
+
+        if(mode == 1) {
+            testnet = testnet_optimism_kovan;
+        }
+        weth = IWETH10(testnet.WETH);
+        TransferHelper.safeTransferETH(address(weth), 100e18);
+        // weth.deposit{value: 100e18}();
+        console.log("[deployTestnet()] WETH Balance = ", weth.balanceOf(address(this)));
+        // weth = IWETH10(address(new MyWETH(100e18)));
+        wbtc = IERC20(address(new Collateral("WBTC", "WBTC", 100e18)));
+        oracle = new MockOracle();
+        oracle.setPriceNow(address(weth), Denominations.USD, 100e18);
+        oracle.setPriceNow(address(wbtc), Denominations.USD, 120e18);
+
+        perp = new MockPerp(
+            IMockOracle(address(oracle)),
+            1000,   // feeOpenShort = 0.1% 
+            1000    // feeCloseShort = 0.1%
+        );
+
+        lemmaTreasury = new MockLemmaTreasury();
+        usdl = new MockUSDL(
+            "USDL",
+            "USDL",
+            address(lemmaTreasury)
+        );
+
+        usdl.setPrice(address(weth), 100e18);
+        usdl.setPrice(address(wbtc), 50e18);
+
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth));
+        lemmaSwap.setCollateralToDexIndex(address(weth), 0);
+        lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
+
+        usdl.setLemmaSwap(address(lemmaSwap));
+    }
     
-    function deploy() external {
+    function deployLocal() external {
         // weth = new Collateral("WETH", "WETH", 100e18);
         weth = new WETH10();
         // TransferHelper.safeTransferETH(address(weth), 10e18);
