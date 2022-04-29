@@ -49,12 +49,14 @@ contract Deployment {
 
     struct s_testnet {
         address WETH;
+        address USDLemma;
     }
 
     s_testnet public testnet_optimism_kovan;
 
     constructor() {
         testnet_optimism_kovan.WETH = address(0x4200000000000000000000000000000000000006);
+        testnet_optimism_kovan.USDLemma = address(0x15264ce29dEccc0C997D2Bd9D2accBBe37306517);
     }
 
 
