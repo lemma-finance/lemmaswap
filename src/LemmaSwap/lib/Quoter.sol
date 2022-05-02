@@ -2,20 +2,47 @@ pragma solidity ^0.7.6;
 // pragma abicoder v2;
 
 import {IQuoter} from "./interfaces/IQuoter.sol";
-import {StorageAccessible} from "@util-contracts/contracts/storage/StorageAccessible.sol";
+import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
+// import {StorageAccessible} from "@util-contracts/contracts/storage/StorageAccessible.sol";
 import "forge-std/console.sol";
 
 
 
-interface IUSDLemmaForPrice {
+// MockUSDL Interface 
+interface IMockUSDL {
     function USDL2Collateral(address collateral, uint256 amount) external view returns (uint256);
     function Collateral2USDL(address collateral, uint256 amount) external view returns (uint256);
+}
+
+
+
+// Minimal RealUSDL Interface
+interface IRealUSDL {
+    // Collateral2USDL
+    function depositToWExactCollateral(
+        address to,
+        uint256 collateralAmount,
+        uint256 perpetualDEXIndex,
+        uint256 minUSDLToMint,
+        address collateral
+    ) external;
+
+    // USDL2Collateral
+    function withdrawTo(
+        address to,
+        uint256 amount,
+        uint256 perpetualDEXIndex,
+        uint256 minCollateralAmountToGetBack,
+        address collateral
+    ) external;
+
 }
 
 contract Quoter is IQuoter {
     // Converts USDL amount to Collateral amount at oracle price
 
-    IUSDLemmaForPrice public usdl;
+    address public usdl;
 
     // 0 --> MockUSDL 
     // 1 --> Sim with Real USDL 
@@ -23,7 +50,7 @@ contract Quoter is IQuoter {
 
     function simulate(
         address targetContract,
-        bytes calldata calldataPayload
+        bytes memory calldataPayload
     ) public returns (bytes memory response) {
         // Suppress compiler warnings about not using parameters, while allowing
         // parameters to keep names for documentation purposes. This does not
@@ -87,23 +114,70 @@ contract Quoter is IQuoter {
     }
 
     function setUSDLemma(address _usdl) external {
-        usdl = IUSDLemmaForPrice(_usdl);
+        usdl = _usdl;
     }
-    
+
+    // This is what gets called by the Sim
+    function _Collateral2USDL(address collateral, uint256 amount) public returns (uint256) {
+            // TODO: Use Simulate
+
+            // TODO: Replace with input arg
+            uint256 perpetualDEXIndex = 0;
+
+            uint256 minUSDLToMint = 0;
+
+            if(IERC20(collateral).allowance(address(this), usdl) < type(uint256).max) {
+                IERC20(collateral).approve(usdl, type(uint256).max);
+            }
+
+            TransferHelper.safeTransferFrom(collateral, msg.sender, address(this), amount);
+
+            IRealUSDL(usdl).depositToWExactCollateral(address(this), amount, perpetualDEXIndex, minUSDLToMint, collateral);
+
+            return IERC20(usdl).balanceOf(address(this));
+
+    }
+
+    // This is what gets called by the Sim
+    function _USDL2Collateral(address collateral, uint256 amount) public returns (uint256) {
+            // TODO: Use Simulate
+
+            // TODO: Replace with input arg
+            uint256 perpetualDEXIndex = 0;
+
+            uint256 minCollateralAmountToGetBack = 0;
+
+            if(IERC20(usdl).allowance(address(this), usdl) < type(uint256).max) {
+                IERC20(usdl).approve(usdl, type(uint256).max);
+            }
+
+            TransferHelper.safeTransferFrom(usdl, msg.sender, address(this), amount);
+
+            IRealUSDL(usdl).withdrawTo(address(this), amount, perpetualDEXIndex, minCollateralAmountToGetBack, collateral);
+
+            return IERC20(collateral).balanceOf(address(this));
+
+    }
+
+
     function USDL2Collateral(address collateral, uint256 amount) external override returns (uint256) {
         if(mode == 1) {
-            // TODO: Use Simulate
-            return 0;
+            bytes memory simFunc = abi.encodeWithSelector(this._USDL2Collateral.selector, collateral, amount);
+            bytes memory res = simulate(address(this), simFunc);
+            uint256 collateralAmount = abi.decode(res, (uint256));
+            return collateralAmount;
         }
-        return usdl.USDL2Collateral(collateral, amount);
+        return IMockUSDL(usdl).USDL2Collateral(collateral, amount);
     }
 
     function Collateral2USDL(address collateral, uint256 amount) external override returns (uint256) { 
         if(mode == 1) {
-            // TODO: Use Simulate
-            return 0;
+            bytes memory simFunc = abi.encodeWithSelector(this._Collateral2USDL.selector, collateral, amount);
+            bytes memory res = simulate(address(this), simFunc);
+            uint256 usdlAmount = abi.decode(res, (uint256));
+            return usdlAmount;
         }
-        return usdl.Collateral2USDL(collateral, amount);
+        return IMockUSDL(usdl).Collateral2USDL(collateral, amount);
     }
 }
 
