@@ -24,7 +24,7 @@ interface IUSDLemma is IERC20 {
         uint256 collateralAmount,
         uint256 perpetualDEXIndex,
         uint256 minUSDLToMint,
-        IERC20 collateral
+        address collateral
     ) external;
 
     function withdrawToWExactCollateral(

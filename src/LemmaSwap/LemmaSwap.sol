@@ -75,6 +75,10 @@ contract LemmaSwap {
         emit Receive((msg.sender), msg.value);
     }
 
+    function setUSDL(address _usdl) external {
+        usdl = IUSDLSwapSubset(_usdl);
+    }
+
     function _returnAllTokens(IERC20 token, address to) internal {
         if (token.balanceOf(address(this)) > 0) {
             TransferHelper.safeTransfer(

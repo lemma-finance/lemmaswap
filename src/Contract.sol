@@ -42,9 +42,11 @@ contract Deployment {
     IERC20 public wbtc;
     MockLemmaTreasury public lemmaTreasury;
     Quoter public quoter;
-    MockUSDL public usdl;
+    IUSDLemma public usdl;
     LemmaSwap public lemmaSwap;
     IWETH10 public weth;
+
+    bool useRealUSDL;
 
     fallback() external payable {}
     receive() external payable {}
@@ -61,6 +63,29 @@ contract Deployment {
     constructor() {
         testnet_optimism_kovan.WETH = address(0x4200000000000000000000000000000000000006);
         testnet_optimism_kovan.USDLemma = address(0x15264ce29dEccc0C997D2Bd9D2accBBe37306517);
+        useRealUSDL = true;
+    }
+
+
+    function _deployUSDL(bool useRealUSDL, address lemmaSwap) internal {
+        if(useRealUSDL) {
+            // Use Real USDL
+            quoter.setMode(1);
+            usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);
+        } else {
+            MockUSDL _usdl = new MockUSDL(
+                "USDL",
+                "USDL",
+                address(lemmaTreasury)
+            );
+
+            _usdl.setPrice(address(weth), 100e18);
+            _usdl.setPrice(address(wbtc), 50e18);
+
+            _usdl.setLemmaSwap(lemmaSwap);
+
+            usdl = IUSDLemma(address(_usdl));
+        }
     }
 
 
@@ -86,24 +111,19 @@ contract Deployment {
             1000    // feeCloseShort = 0.1%
         );
 
+
         lemmaTreasury = new MockLemmaTreasury();
-        usdl = new MockUSDL(
-            "USDL",
-            "USDL",
-            address(lemmaTreasury)
-        );
 
         quoter = new Quoter();
         quoter.setUSDLemma(address(usdl));
 
-        usdl.setPrice(address(weth), 100e18);
-        usdl.setPrice(address(wbtc), 50e18);
-
-        lemmaSwap = new LemmaSwap(address(usdl), address(weth), address(quoter));
+        lemmaSwap = new LemmaSwap(address(0), address(weth), address(quoter));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
-        usdl.setLemmaSwap(address(lemmaSwap));
+        _deployUSDL(useRealUSDL, address(lemmaSwap));
+        lemmaSwap.setUSDL(address(usdl));
+
     }
     
     function deployLocal() external {
@@ -124,23 +144,25 @@ contract Deployment {
         );
 
         lemmaTreasury = new MockLemmaTreasury();
-        usdl = new MockUSDL(
-            "USDL",
-            "USDL",
-            address(lemmaTreasury)
-        );
+
+        // usdl = new MockUSDL(
+        //     "USDL",
+        //     "USDL",
+        //     address(lemmaTreasury)
+        // );
+
+        // usdl.setPrice(address(weth), 100e18);
+        // usdl.setPrice(address(wbtc), 50e18);
 
         quoter = new Quoter();
         quoter.setUSDLemma(address(usdl));
 
-        usdl.setPrice(address(weth), 100e18);
-        usdl.setPrice(address(wbtc), 50e18);
-
-        lemmaSwap = new LemmaSwap(address(usdl), address(weth), address(quoter));
+        lemmaSwap = new LemmaSwap(address(0), address(weth), address(quoter));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
-        usdl.setLemmaSwap(address(lemmaSwap));
+        _deployUSDL(useRealUSDL, address(lemmaSwap));
+        lemmaSwap.setUSDL(address(usdl));
     }
 
     function askForMoney(address collateral, uint256 amount) external {
