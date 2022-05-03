@@ -22,13 +22,14 @@ contract Minter {
         d = _d;
     }
 
-    function mint(IERC20 collateral, uint256 amount) external {
+    function mint(IERC20 collateral, uint256 perpDEXIndex, uint256 amount) external {
         d.askForMoney(address(collateral), amount);
         collateral.approve(address(d.usdl()), type(uint256).max);
+        // console.log("T1 ", d.usdl().perpetualDEXWrappers(0, ))
         d.usdl().depositToWExactCollateral(
             address(this),
             amount,
-            0,
+            perpDEXIndex,
             0,
             address(collateral)
         );
@@ -81,41 +82,49 @@ contract ContractTest is DSTest {
 
     // Let's put some collateral 
     function setUpForSwap() public {
+        console.log("Trying to mint USDL with WETH");
         Minter m1 = new Minter(d);
-        m1.mint(d.weth(), 10e18);
+        m1.mint(d.weth(), 0, 10e18);
+        console.log("Minting with WETH Done");
 
+        console.log("Trying to mint USDL with WBTC");
         Minter m2 = new Minter(d);
-        m2.mint(d.wbtc(), 50e18);
+        m2.mint(d.wbtc(), 1, 10e3);
+        console.log("Minting with WBTC Done");
     }
 
-    function testOracle() public {
-        if (!runTests["testOracle"]) {
-            assertTrue(true);
-            return;
-        }
-
-        MockOracle oracle = d.oracle();
-        uint256 priceNow = oracle.getPriceNow(address(d.weth()), Denominations.USD);
-        console.log("Price Now is ", priceNow);
-        assertTrue(priceNow == 100e18);
+    function testSetupForSwap() public {
+        setUpForSwap();
     }
 
     function testPayable() public {
         TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
     }
 
-    function testPerp() public {
-        if (!runTests["testPerp"]) {
-            assertTrue(true);
-            return;
-        }
+    // function testOracle() public {
+    //     if (!runTests["testOracle"]) {
+    //         assertTrue(true);
+    //         return;
+    //     }
 
-        MockPerp perp = d.perp();
-        uint256 amount = 1e18;
-        uint256 expectedAmount = amount - (perp.feeOpenShort_1e6() * amount / 1e6);
-        perp.openShort1XWExactCollateral(address(d.weth()), amount);
-        assertTrue( perp.shorts(address(this), address(d.weth()), Denominations.USD) == expectedAmount );
-    }
+    //     MockOracle oracle = d.oracle();
+    //     uint256 priceNow = oracle.getPriceNow(address(d.weth()), Denominations.USD);
+    //     console.log("Price Now is ", priceNow);
+    //     assertTrue(priceNow == 100e18);
+    // }
+
+    // function testPerp() public {
+    //     if (!runTests["testPerp"]) {
+    //         assertTrue(true);
+    //         return;
+    //     }
+
+    //     MockPerp perp = d.perp();
+    //     uint256 amount = 1e18;
+    //     uint256 expectedAmount = amount - (perp.feeOpenShort_1e6() * amount / 1e6);
+    //     perp.openShort1XWExactCollateral(address(d.weth()), amount);
+    //     assertTrue( perp.shorts(address(this), address(d.weth()), Denominations.USD) == expectedAmount );
+    // }
 
 
     // function testMint() public {
@@ -162,12 +171,13 @@ contract ContractTest is DSTest {
         d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
         sToken memory tokenIn = sToken({
             token: d.weth(), 
-            amount: 1e18
+            amount: 10e18
         });
 
+        // NOTE: WBTC has probably 8 decimals also on Optimism Kovan Chain 
         sToken memory tokenOut = sToken({
             token: d.wbtc(), 
-            amount: 12e17
+            amount: 10e2
         });
 
         d.lemmaSwap().swapWithExactInputAndOutput(tokenIn, tokenOut, address(this));
