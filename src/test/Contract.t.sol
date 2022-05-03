@@ -82,19 +82,19 @@ contract ContractTest is DSTest {
 
     // Let's put some collateral 
     function setUpForSwap() public {
-        console.log("Trying to mint USDL with WETH");
+        console.log("[setUpForSwap()] Trying to mint USDL with WETH");
         Minter m1 = new Minter(d);
         m1.mint(d.weth(), 0, 10e18);
-        console.log("Minting with WETH Done");
+        console.log("[setUpForSwap()] Minting with WETH Done");
 
-        console.log("Trying to mint USDL with WBTC");
+        console.log("[setUpForSwap()] Trying to mint USDL with WBTC");
         Minter m2 = new Minter(d);
 
         // NOTE: Using >= 10e4 results in a pretty weird 
         // [FAIL. Reason: SafeMath: subtraction overflow] testSetupForSwap() (gas: 535585)
         // Need to investigate it later
         m2.mint(d.wbtc(), 1, 10e3);
-        console.log("Minting with WBTC Done");
+        console.log("[setUpForSwap()] Minting with WBTC Done");
     }
 
     function testSetupForSwap() public {
@@ -210,17 +210,27 @@ contract ContractTest is DSTest {
             return;
         }
 
+
+        console.log("[testSwap2()] Start");
+
         setUpForSwap();
 
+        console.log("[testSwap2()] Setup for Swap DONE");
+
         d.askForMoney(address(d.weth()), 10e18);
+
+        console.log("[testSwap2()] Money Received");
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
 
+        console.log("[testSwap2()] Initial WETH Balance ", wethInitialBalance);
+        console.log("[testSwap2()] Initial WBTC Balance ", wbtcInitialBalance);
+
         d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
         sToken memory tokenIn = sToken({
             token: d.weth(), 
-            amount: 10e2
+            amount: 10e3
         });
 
         sToken memory tokenOut = sToken({
