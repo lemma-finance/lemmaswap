@@ -89,6 +89,10 @@ contract ContractTest is DSTest {
 
         console.log("Trying to mint USDL with WBTC");
         Minter m2 = new Minter(d);
+
+        // NOTE: Using >= 10e4 results in a pretty weird 
+        // [FAIL. Reason: SafeMath: subtraction overflow] testSetupForSwap() (gas: 535585)
+        // Need to investigate it later
         m2.mint(d.wbtc(), 1, 10e3);
         console.log("Minting with WBTC Done");
     }
@@ -216,7 +220,7 @@ contract ContractTest is DSTest {
         d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
         sToken memory tokenIn = sToken({
             token: d.weth(), 
-            amount: 1e18
+            amount: 10e2
         });
 
         sToken memory tokenOut = sToken({
