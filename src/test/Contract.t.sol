@@ -352,7 +352,7 @@ contract ContractTest is DSTest {
         path[0] = address(d.weth());
         path[1] = address(d.wbtc());
 
-        uint256 amountIn = 1e18;
+        uint256 amountIn = 10e3;
         // uint256 expectedAmount = d.lemmaSwap().getAmountsOut(
         //     sToken({
         //         token: d.weth(),
@@ -513,7 +513,7 @@ contract ContractTest is DSTest {
         // path[0] = address(d.weth());
         path[0] = address(d.wbtc());
 
-        uint256 amountIn = 1e18;
+        uint256 amountIn = 10e3;
         // uint256 expectedAmount = d.lemmaSwap().getAmountsOut(
         //     sToken({
         //         token: d.weth(),
@@ -649,7 +649,7 @@ contract ContractTest is DSTest {
         // path[0] = address(d.weth());
         path[0] = address(d.wbtc());
 
-        uint256 amountIn = 1e18;
+        uint256 amountIn = 10e2;
         // uint256 expectedAmount = d.lemmaSwap().getAmountsOut(
         //     sToken({
         //         token: d.wbtc(),

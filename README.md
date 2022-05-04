@@ -1,6 +1,22 @@
 
 # LemmaSwap
 
+## Status 
+
+I am now testing using the Optimism Kovan Testnet setup 
+
+Currently I am focusing on this test 
+
+```
+forge test --fork-url https://kovan.optimism.io -m testSwap1
+```
+
+According to the trace I get, I can mint with WETH and WBTC successfully, so it means I can put collateral in the Perp Protocol 
+
+
+
+## Instructions 
+
 1. Installation
 
 1.1 Install Foundry with 
