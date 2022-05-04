@@ -46,7 +46,8 @@ contract Deployment is Test {
     LemmaSwap public lemmaSwap;
     IWETH10 public weth;
 
-    bool useRealUSDL;
+    bool public useRealUSDL;
+    bool public useQuoter;
 
     fallback() external payable {}
     receive() external payable {}
@@ -77,6 +78,7 @@ contract Deployment is Test {
 
 
         useRealUSDL = true;
+        useQuoter = false;
     }
 
 
@@ -130,7 +132,7 @@ contract Deployment is Test {
         quoter = new Quoter();
         quoter.setUSDLemma(address(usdl));
 
-        lemmaSwap = new LemmaSwap(address(0), address(weth), address(quoter));
+        lemmaSwap = new LemmaSwap(address(0), address(weth) /*address(quoter)*/);
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
@@ -170,7 +172,7 @@ contract Deployment is Test {
         quoter = new Quoter();
         quoter.setUSDLemma(address(usdl));
 
-        lemmaSwap = new LemmaSwap(address(0), address(weth), address(quoter));
+        lemmaSwap = new LemmaSwap(address(0), address(weth) /*address(quoter)*/);
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
