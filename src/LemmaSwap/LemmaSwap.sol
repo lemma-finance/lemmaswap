@@ -188,43 +188,8 @@ contract LemmaSwap {
             amountOutMin,
             to
         );
-        // res[0] = swapWithExactInput(
-        //     sToken({
-        //         token: IERC20(path[0]),
-        //         amount: amountIn
-        //     }),
-        //     sToken({
-        //         token: IERC20(path[1]),
-        //         amount: amountOutMin
-        //     }),
-        //     to
-        //     );
         return res;
     }
-
-    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L238
-    // function swapTokensForExactTokens(
-    //     uint amountOut,
-    //     uint amountInMax,
-    //     address[] calldata path,
-    //     address to,
-    //     uint deadline
-    // ) external returns (uint256[] memory amounts) {
-    //     require(path.length == 2, "! Multi-hop swap not supported yet");
-    //     uint256[] memory res = new uint256[](1);
-    //     res[0] = swapWithExactOutput(
-    //         sToken({
-    //             token: IERC20(path[0]),
-    //             amount: amountInMax
-    //         }),
-    //         sToken({
-    //             token: IERC20(path[1]),
-    //             amount: amountOut
-    //         }),
-    //         to
-    //         );
-    //     return res;
-    // }
 
     // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
     function swapExactETHForTokens(
@@ -251,29 +216,6 @@ contract LemmaSwap {
         return res;
     }
 
-    // function swapTokensForExactETH(uint amountOut, uint amountInMax, address[] calldata path, address to, uint deadline)
-    //     external
-    //     returns (uint256[] memory amounts) {
-    //         require(path.length == 1, "! Multi-hop swap not supported yet");
-    //         uint256[] memory res = new uint256[](1);
-    //         res[0] = swapWithExactOutput(
-    //             sToken({
-    //                 token: IERC20(path[0]),
-    //                 amount: amountInMax
-    //             }),
-    //             sToken({
-    //                 token: weth,
-    //                 amount: amountOut
-    //             }),
-    //             address(this)
-    //             );
-    //         require(weth.balanceOf(address(this)) == amountOut, "! T111");
-    //         // console.log("[swapTokensForExactETH] WETH Balance = ", weth.balanceOf(address(this)));
-    //         weth.withdraw(amountOut);
-    //         TransferHelper.safeTransferETH(to, amountOut);
-    //         return res;
-    //     }
-
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -297,69 +239,6 @@ contract LemmaSwap {
         return res;
     }
 
-    // function swapETHForExactTokens(uint256 amountOut, address[] calldata path, address to, uint256 deadline)
-    //     external
-    //     payable
-    //     returns (uint256[] memory amounts) {
-    //         require(path.length == 1, "! Multi-hop swap not supported yet");
-    //         uint256 amountIn = getAmountsIn(
-    //         sToken({
-    //             token: weth,
-    //             amount: 0
-    //         }),
-    //         sToken({
-    //             token: IERC20(path[0]),
-    //             amount: amountOut
-    //         }));
-    //         require(amountIn > 0, "No corresponding input amount");
-    //         // console.log("[_swapWithExactOutput()] amountIn = ", amountIn);
-    //         require(msg.value > amountIn, "! not enough ETH");
-    //         TransferHelper.safeTransferETH(address(weth), amountIn);
-    //         TransferHelper.safeTransferETH(msg.sender, msg.value - amountIn);
-    //         uint256[] memory res = new uint256[](1);
-    //         res[0] = _swapWithExactInput(
-    //             sToken({
-    //                 token: weth,
-    //                 amount: amountIn
-    //             }),
-    //             sToken({
-    //                 token: IERC20(path[0]),
-    //                 amount: 0
-    //             }), address(this), to);
-    //         return res;
-    //     }
-
-    // function getAmountsIn(sToken memory tokenIn, sToken memory tokenOut) public returns(uint256) {
-    //     console.log("[getAmountsIn()] tokenOut.amount = ", tokenOut.amount);
-    //     uint256 totalCollateralOutRequired = tokenOut.amount * 1e6 / (1e6 - getProtocolFeesCoeffTokenOut());
-    //     // uint256 totalCollateralOutRequired = tokenOut.amount + getProtocolFeesTokenOut(tokenOut);
-    //     console.log("[getAmountsIn()] totalCollateralOutRequired = ", totalCollateralOutRequired);
-    //     uint256 totalUSDLRequired = quoter.Collateral2USDL(address(tokenOut.token), totalCollateralOutRequired);
-    //     // uint256 totalUSDLRequired = usdl.Collateral2USDL(address(tokenOut.token), totalCollateralOutRequired);
-    //     console.log("[getAmountsIn()] totalUSDLRequired = ", totalUSDLRequired);
-    //     uint256 totalCollateralInRequired = quoter.USDL2Collateral(address(tokenIn.token), totalUSDLRequired);
-    //     // uint256 totalCollateralInRequired = usdl.USDL2Collateral(address(tokenIn.token), totalUSDLRequired);
-    //     console.log("[getAmountsIn()] totalCollateralInRequired = ",totalCollateralInRequired);
-    //     uint256 res = totalCollateralInRequired * 1e6 / (1e6 - getProtocolFeesCoeffTokenIn());
-    //     // uint256 res = totalCollateralInRequired + getProtocolFeesTokenIn(sToken({token: tokenIn.token, amount: totalCollateralInRequired}));
-    //     console.log("[getAmountsIn()] res = ", res);
-    //     return res;
-    // }
-
-    // function getAmountsOut(sToken memory tokenIn, sToken memory tokenOut) public returns(uint256) {
-    //     console.log("[getAmountsOut()] tokenIn.amount = ", tokenIn.amount);
-    //     uint256 netCollateralInAmount = tokenIn.amount - getProtocolFeesTokenIn(tokenIn);
-    //     console.log("[getAmountsOut()] netCollateralInAmount = ", netCollateralInAmount);
-    //     uint256 netUSDLAmount = quoter.Collateral2USDL(address(tokenIn.token), netCollateralInAmount);
-    //     // uint256 netUSDLAmount = usdl.Collateral2USDL(address(tokenIn.token), netCollateralInAmount);
-    //     console.log("[getAmountsOut()] netUSDLAmount = ", netUSDLAmount);
-    //     uint256 totalCollateralOutAmount = quoter.USDL2Collateral(address(tokenOut.token), netUSDLAmount);
-    //     // uint256 totalCollateralOutAmount = usdl.USDL2Collateral(address(tokenOut.token), netUSDLAmount);
-    //     console.log("[getAmountsOut()] totalCollateralOutAmount = ", totalCollateralOutAmount);
-    //     uint256 res = totalCollateralOutAmount - getProtocolFeesTokenOut(sToken({token: tokenOut.token, amount: totalCollateralOutAmount}));
-    //     console.log("[getAmountsOut()] res = ", res);
-    //     return res;
-    // }
 
     function swapWithExactInputAndOutput(
         address tokenIn,
@@ -368,14 +247,8 @@ contract LemmaSwap {
         uint256 amountOut,
         address to
     ) public returns (uint256) {
-        // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
-        // require(collateralToDexIndex[address(tokenOut.token)] != address(0), "! collateral tokenOut");
-
         require(amountIn > 0, "! tokenIn amount");
         require(amountOut > 0, "! tokenOut amount");
-
-        // console.log("[LemmaSwap swapWithExactInputAndOutput()] TokenIn Amount ", tokenIn.amount);
-        // console.log("[LemmaSwap swapWithExactInputAndOutput()] collateralToDexIndex[address(tokenIn.token)] ", convertCollateralToValidDexIndex(address(tokenIn.token)));
 
         TransferHelper.safeTransferFrom(
             address(tokenIn),
@@ -384,20 +257,12 @@ contract LemmaSwap {
             amountIn
         );
 
-        // console.log("[LemmaSwap] Balance TokenIn Before = ", tokenIn.token.balanceOf(address(this)));
-
         uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
         TransferHelper.safeTransfer(
             tokenIn,
             usdl.lemmaTreasury(),
             getProtocolFeesTokenIn(tokenIn, amountIn)
         );
-
-        // console.log("[LemmaSwap] protocolFeesIn = ", protocolFeesIn);
-
-        // console.log("[LemmaSwap] LemmaTreasury = ", usdl.lemmaTreasury());
-
-        // console.log("[LemmaSwap] Balance TokenIn After = ", tokenIn.token.balanceOf(address(this)));
 
         amountIn = IERC20(tokenIn).balanceOf(address(this));
 
@@ -415,9 +280,6 @@ contract LemmaSwap {
             0,
             IERC20(tokenIn)
         );
-        // Need to take into account there is a 1% fee in redeeming
-        // uint256 expectedOutput = tokenOut.amount;
-        // tokenOut.amount = getAdjustedOutputAmount(tokenOut);
 
         uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut, amountOut);
         usdl.withdrawToWExactCollateral(
@@ -478,13 +340,7 @@ contract LemmaSwap {
         address from,
         address to
     ) internal returns (uint256) {
-        // require(collateralToDexIndex[address(tokenIn.token)] != address(0), "! collateral tokenIn");
-        // require(collateralToDexIndex[address(tokenOut.token)] != address(0), "! collateral tokenOut");
-
         require(amountIn > 0, "! tokenIn amount");
-
-        // console.log("[LemmaSwap swapWithExactInput()] TokenIn Amount ", tokenIn.amount);
-        // console.log("[LemmaSwap swapWithExactInput()] collateralToDexIndex[address(tokenIn.token)] ", convertCollateralToValidDexIndex(address(tokenIn.token)));
 
         if (from != address(this)) {
             TransferHelper.safeTransferFrom(
@@ -495,22 +351,12 @@ contract LemmaSwap {
             );
         }
 
-        // console.log("[LemmaSwap] Balance TokenIn Before = ", tokenIn.token.balanceOf(address(this)));
-
         uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
         TransferHelper.safeTransfer(
             tokenIn,
             usdl.lemmaTreasury(),
             getProtocolFeesTokenIn(tokenIn, amountIn)
         );
-
-        // console.log("[LemmaSwap] protocolFeesIn = ", protocolFeesIn);
-
-        // console.log("[LemmaSwap] LemmaTreasury = ", usdl.lemmaTreasury());
-
-        // console.log("[LemmaSwap] Balance TokenIn After = ", tokenIn.token.balanceOf(address(this)));
-
-        // tokenIn.amount = tokenIn.token.balanceOf(address(this));
 
         if (
             IERC20(tokenIn).allowance(address(this), address(usdl)) <
@@ -526,9 +372,6 @@ contract LemmaSwap {
             0,
             IERC20(tokenIn)
         );
-        // Need to take into account there is a 1% fee in redeeming
-        // uint256 expectedOutput = tokenOut.amount;
-        // tokenOut.amount = getAdjustedOutputAmount(tokenOut);
 
         uint256 usdlAmount = usdl.balanceOf(address(this));
 
@@ -539,10 +382,6 @@ contract LemmaSwap {
             amountOut,
             IERC20(tokenOut)
         );
-
-        // tokenOut.amount = tokenOut.token.balanceOf(address(this));
-
-        // console.log("[_swapWithExactInput()] TokenOut Amount = ", tokenOut.token.balanceOf(address(this)));
 
         uint256 protocolFeesOut = getProtocolFeesTokenOut(
             tokenOut,
@@ -555,13 +394,9 @@ contract LemmaSwap {
             protocolFeesOut
         );
 
-        // console.log("[LemmaSwap] protocolFeesOut = ", protocolFeesOut);
-
         uint256 netCollateralToGetBack = IERC20(tokenOut).balanceOf(
             address(this)
         );
-
-        // console.log("netCollateralToGetBack = ", netCollateralToGetBack);
 
         require(
             netCollateralToGetBack >= amountOut,
@@ -570,30 +405,10 @@ contract LemmaSwap {
 
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
 
-        //_returnAllTokens(tokenIn.token);
         _returnAllTokens(usdl, to);
 
         return netCollateralToGetBack;
     }
 
-    // function swapWithExactOutput(
-    //     sToken memory tokenIn,
-    //     sToken memory tokenOut,
-    //     address to
-    // ) public returns (uint256) {
-    //     return _swapWithExactOutput(tokenIn, tokenOut, msg.sender, to);
-    // }
 
-    // function _swapWithExactOutput(
-    //     sToken memory tokenIn,
-    //     sToken memory tokenOut,
-    //     address from,
-    //     address to
-    // ) internal returns (uint256) {
-    //     uint256 amountIn = getAmountsIn(tokenIn, tokenOut);
-    //     // console.log("[_swapWithExactOutput()] amountIn = ", amountIn);
-    //     tokenIn.amount = amountIn;
-    //     require(tokenIn.amount > 0, "No corresponding input amount");
-    //     return _swapWithExactInput(tokenIn, tokenOut, from, to);
-    // }
 }
