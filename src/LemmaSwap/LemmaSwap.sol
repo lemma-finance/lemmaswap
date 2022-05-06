@@ -318,7 +318,7 @@ contract LemmaSwap {
         address tokenIn,
         uint256 amountIn,
         address tokenOut,
-        uint256 amountOut,
+        uint256 amountOutMin,
         address to
     ) public returns (uint256) {
         return
@@ -326,7 +326,7 @@ contract LemmaSwap {
                 tokenIn,
                 amountIn,
                 tokenOut,
-                amountOut,
+                amountOutMin,
                 msg.sender,
                 to
             );
@@ -336,7 +336,7 @@ contract LemmaSwap {
         address tokenIn,
         uint256 amountIn,
         address tokenOut,
-        uint256 amountOut,
+        uint256 amountOutMin,
         address from,
         address to
     ) internal returns (uint256) {
@@ -379,7 +379,7 @@ contract LemmaSwap {
             address(this),
             usdlAmount,
             convertCollateralToValidDexIndex(tokenOut),
-            amountOut,
+            amountOutMin,
             IERC20(tokenOut)
         );
 
@@ -399,7 +399,7 @@ contract LemmaSwap {
         );
 
         require(
-            netCollateralToGetBack >= amountOut,
+            netCollateralToGetBack >= amountOutMin,
             "! netCollateralToGetBack"
         );
 
