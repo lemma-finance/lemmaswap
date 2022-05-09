@@ -91,6 +91,10 @@ contract LemmaSwap {
         emit NewCollateralToDEXIndex(collateral, dexIndex);
     }
 
+    /**
+        @notice Update LemmaSwap fees in 1e6 format
+        @dev The dexIndex is a low level detail that we won't to hide from the UX related methods 
+     */
     function setLemmaSwapFees(uint256 _fees)
         external
         onlyOwner
@@ -101,64 +105,76 @@ contract LemmaSwap {
         emit NewLemmaSwapFees(lemmaSwapFees);
     }
 
+    /**
+        @notice LemmaSwap fees to be taken on input token
+        @dev The fees are in 1e6 format
+     */
     function getProtocolFeesCoeffTokenIn() public view returns (uint256) {
         return (lemmaSwapFees / 2);
     }
 
     /**
-        @notice The fees taken from LemmaSwap on the Input Token
+        @notice LemmaSwap fees to be taken on output token
+        @dev The fees are in 1e6 format
      */
     function getProtocolFeesCoeffTokenOut() public view returns (uint256) {
         return (lemmaSwapFees / 2);
     }
 
+    /**
+        @notice Computes the total amount of fees on input token
+     */
     function getProtocolFeesTokenIn(address token, uint256 amount)
         public
         view
         returns (uint256)
     {
-        return (amount * (lemmaSwapFees / 2)) / 1e6;
+        return (amount * getProtocolFeesCoeffTokenIn()) / 1e6;
     }
 
     /**
-        @notice The fees taken from LemmaSwap on the Output Token
+        @notice Computes the total amount of fees on output token
      */
     function getProtocolFeesTokenOut(address token, uint256 amount)
         public
         view
         returns (uint256)
     {
-        return (amount * (lemmaSwapFees / 2)) / 1e6;
+        return (amount * getProtocolFeesCoeffTokenOut()) / 1e6;
     }
 
     function getAdjustedOutputAmount(address token, uint256 amount)
-        public
+        external
         view
         returns (uint256)
     {
-        uint256 dexIndex = convertCollateralToValidDexIndex(token);
+        uint256 dexIndex = _convertCollateralToValidDexIndex(token);
         uint256 redeemFees = usdl.getFees(dexIndex, token, false);
         return (amount * 1e6) / (1e6 - redeemFees);
     }
 
-    function getMaxOutput(address token) public view returns (int256) {
+    /**
+        @notice Returns the max possible output for a given token
+        @dev The max possible output corresponds to the max amount of collateral that is possible to withdraw from the underlying protocol 
+     */
+    function getMaxOutput(address token) external view returns (int256) {
         if (collateralToDexIndex[token] == 0) {
             // Collateral not supported
             return 0;
         }
         return
             usdl.getTotalPosition(
-                convertCollateralToValidDexIndex(token),
+                _convertCollateralToValidDexIndex(token),
                 token
             );
     }
 
     /**
         @notice Collateral --> dexIndex
-        @dev There ia 1:1 collateral <--> dewxIndex relationship 
-        #dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this 
+        @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship 
+        @dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this 
      */
-    function convertCollateralToValidDexIndex(address collateral)
+    function _convertCollateralToValidDexIndex(address collateral)
         internal
         view
         returns (uint256)
@@ -239,7 +255,11 @@ contract LemmaSwap {
         return res;
     }
 
-
+    /**
+        @notice Swaps an exact token input amount for an exact token output amount
+        @dev Constraint: setting both input and output amount defines the swap price implicitly and this price can't be <= than the vAMM price, if so the TX reverts of course 
+        @dev The price can be >= than the vAMM price, in that case some extra USDL is minted and returned to the `to` address
+     */
     function swapWithExactInputAndOutput(
         address tokenIn,
         uint256 amountIn,
@@ -276,7 +296,7 @@ contract LemmaSwap {
         usdl.depositToWExactCollateral(
             address(this),
             amountIn,
-            convertCollateralToValidDexIndex(tokenIn),
+            _convertCollateralToValidDexIndex(tokenIn),
             0,
             IERC20(tokenIn)
         );
@@ -285,7 +305,7 @@ contract LemmaSwap {
         usdl.withdrawToWExactCollateral(
             address(this),
             amountOut + protocolFeesOut,
-            convertCollateralToValidDexIndex(tokenOut),
+            _convertCollateralToValidDexIndex(tokenOut),
             type(uint256).max,
             IERC20(tokenOut)
         );
@@ -368,7 +388,7 @@ contract LemmaSwap {
         usdl.depositToWExactCollateral(
             address(this),
             IERC20(tokenIn).balanceOf(address(this)),
-            convertCollateralToValidDexIndex(tokenIn),
+            _convertCollateralToValidDexIndex(tokenIn),
             0,
             IERC20(tokenIn)
         );
@@ -378,7 +398,7 @@ contract LemmaSwap {
         usdl.withdrawTo(
             address(this),
             usdlAmount,
-            convertCollateralToValidDexIndex(tokenOut),
+            _convertCollateralToValidDexIndex(tokenOut),
             amountOutMin,
             IERC20(tokenOut)
         );
