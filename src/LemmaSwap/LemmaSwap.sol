@@ -14,6 +14,8 @@ interface IERC20Decimal is IERC20 {
 contract LemmaSwap {
     address public owner;
     ILemmaRouter public lemmaRouter;
+
+    // Assumption: there is 1:1 collateral token to dexIndex relationship
     mapping(address => uint8) public collateralToDexIndex;
 
     IUSDLSwapSubset public usdl;
@@ -21,7 +23,7 @@ contract LemmaSwap {
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
 
-    IWETH10 public weth;
+     IWETH10 public weth;
 
     constructor(address _usdl, address _weth) {
         owner = msg.sender;
@@ -34,6 +36,7 @@ contract LemmaSwap {
 
     event NewOwner(address);
     event NewUSDL(address);
+    event NewWETH(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
 
@@ -56,7 +59,14 @@ contract LemmaSwap {
 
     receive() external payable {}
 
-    function setUSDL(address _usdl) external {
+
+    function setWETH(address _weth) external onlyOwner {
+        require(_weth != address(0), "! address");
+        weth = IWETH10(_weth);
+        emit NewWETH(address(weth));
+    }
+
+    function setUSDL(address _usdl) external onlyOwner {
         require(_usdl != address(0), "! address");
         usdl = IUSDLSwapSubset(_usdl);
         emit NewUSDL(address(usdl));
@@ -68,15 +78,6 @@ contract LemmaSwap {
         emit NewOwner(owner);
     }
 
-    function _returnAllTokens(IERC20 token, address to) internal {
-        if (token.balanceOf(address(this)) > 0) {
-            TransferHelper.safeTransfer(
-                address(token),
-                to,
-                token.balanceOf(address(this))
-            );
-        }
-    }
 
     /**
         @notice Updates the Collateral --> dexIndex association
@@ -170,24 +171,15 @@ contract LemmaSwap {
     }
 
     /**
-        @notice Collateral --> dexIndex
-        @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship 
-        @dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this 
+        @notice     Swaps an exact amount of input tokens for an amount of output tokens that is computed as a function of the input and price 
+        @param      amountIn        The amount of the input token 
+        @param      amountOutMin    The minimum amount of output token
+        @param      path            An array of 2 addresses: input token and output token
+        @param      to              Address receiving the output tokens
+        @param      deadline        Currently ignored
+        @dev The msg.sender, prior to calling this function, has to approve LemmaSwap for at least the amountIn 
+        @dev https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L224
      */
-    function _convertCollateralToValidDexIndex(address collateral)
-        internal
-        view
-        returns (uint256)
-    {
-        require(collateral != address(0), "!collateral");
-        require(
-            collateralToDexIndex[collateral] != 0,
-            "Collateral not supported"
-        );
-        return collateralToDexIndex[collateral] - 1;
-    }
-
-    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L224
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -197,17 +189,27 @@ contract LemmaSwap {
     ) external returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         uint256[] memory res = new uint256[](1);
-        res[0] = swapWithExactInput(
+        res[0] = _swapWithExactInput(
             path[0],
             amountIn,
             path[1],
             amountOutMin,
+            msg.sender,
             to
         );
         return res;
     }
 
-    // https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
+
+     /**
+        @notice     Swaps an exact amount of ETH for an amount of output tokens that is computed as a function of the input and price 
+        @param      amountOutMin    The minimum amount of output token
+        @param      path            An array of 2 addresses: input token and output token
+        @param      to              Address receiving the output tokens
+        @param      deadline        Currently ignored
+        @dev The amountIn is the amount of ETH the msg.sender sends to this function when calling it 
+        @dev https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
+     */
     function swapExactETHForTokens(
         uint256 amountOutMin,
         address[] calldata path,
@@ -232,6 +234,15 @@ contract LemmaSwap {
         return res;
     }
 
+     /**
+        @notice     Swaps an exact amount of input tokens for an amount of ETH that is computed as a function of the input and price 
+        @param      amountIn        The amount of the input token
+        @param      amountOutMin    The minimum amount of ETH to get
+        @param      path            An array of 1 address: the input token 
+        @param      to              Address receiving the output tokens
+        @param      deadline        Currently ignored
+        @dev The msg.sender, prior to calling this function, has to approve LemmaSwap for at least the amountIn 
+     */
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -241,11 +252,12 @@ contract LemmaSwap {
     ) external returns (uint256[] memory amounts) {
         require(path.length == 1, "! Multi-hop swap not supported yet");
         uint256[] memory res = new uint256[](1);
-        res[0] = swapWithExactInput(
+        res[0] = _swapWithExactInput(
             path[0],
             amountIn,
             address(weth),
             amountOutMin,
+            msg.sender,
             address(this)
         );
         uint256 wethAmount = weth.balanceOf(address(this));
@@ -255,101 +267,34 @@ contract LemmaSwap {
         return res;
     }
 
+
+
     /**
-        @notice Swaps an exact token input amount for an exact token output amount
-        @dev Constraint: setting both input and output amount defines the swap price implicitly and this price can't be <= than the vAMM price, if so the TX reverts of course 
-        @dev The price can be >= than the vAMM price, in that case some extra USDL is minted and returned to the `to` address
+        @notice Collateral --> dexIndex
+        @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship 
+        @dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this 
      */
-    function swapWithExactInputAndOutput(
-        address tokenIn,
-        uint256 amountIn,
-        address tokenOut,
-        uint256 amountOut,
-        address to
-    ) public returns (uint256) {
-        require(amountIn > 0, "! tokenIn amount");
-        require(amountOut > 0, "! tokenOut amount");
-
-        TransferHelper.safeTransferFrom(
-            address(tokenIn),
-            msg.sender,
-            address(this),
-            amountIn
+    function _convertCollateralToValidDexIndex(address collateral)
+        internal
+        view
+        returns (uint256)
+    {
+        require(collateral != address(0), "!collateral");
+        require(
+            collateralToDexIndex[collateral] != 0,
+            "Collateral not supported"
         );
-
-        uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-        TransferHelper.safeTransfer(
-            tokenIn,
-            usdl.lemmaTreasury(),
-            getProtocolFeesTokenIn(tokenIn, amountIn)
-        );
-
-        amountIn = IERC20(tokenIn).balanceOf(address(this));
-
-        if (
-            IERC20(tokenIn).allowance(address(this), address(usdl)) <
-            type(uint256).max
-        ) {
-            IERC20(tokenIn).approve(address(usdl), type(uint256).max);
-        }
-
-        usdl.depositToWExactCollateral(
-            address(this),
-            amountIn,
-            _convertCollateralToValidDexIndex(tokenIn),
-            0,
-            IERC20(tokenIn)
-        );
-
-        uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut, amountOut);
-        usdl.withdrawToWExactCollateral(
-            address(this),
-            amountOut + protocolFeesOut,
-            _convertCollateralToValidDexIndex(tokenOut),
-            type(uint256).max,
-            IERC20(tokenOut)
-        );
-
-        TransferHelper.safeTransfer(
-            tokenOut,
-            usdl.lemmaTreasury(),
-            getProtocolFeesTokenOut(tokenOut, amountOut)
-        );
-
-        // console.log("[LemmaSwap] protocolFeesOut = ", protocolFeesOut);
-
-        uint256 netCollateralToGetBack = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-
-        TransferHelper.safeTransfer(
-            tokenOut,
-            msg.sender,
-            netCollateralToGetBack
-        );
-
-        //_returnAllTokens(tokenIn.token);
-        _returnAllTokens(usdl, to);
-
-        return IERC20(tokenOut).balanceOf(address(this));
+        return collateralToDexIndex[collateral] - 1;
     }
 
-    function swapWithExactInput(
-        address tokenIn,
-        uint256 amountIn,
-        address tokenOut,
-        uint256 amountOutMin,
-        address to
-    ) public returns (uint256) {
-        return
-            _swapWithExactInput(
-                tokenIn,
-                amountIn,
-                tokenOut,
-                amountOutMin,
-                msg.sender,
-                to
+    function _returnAllTokens(IERC20 token, address to) internal {
+        if (token.balanceOf(address(this)) > 0) {
+            TransferHelper.safeTransfer(
+                address(token),
+                to,
+                token.balanceOf(address(this))
             );
+        }
     }
 
     function _swapWithExactInput(
