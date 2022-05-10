@@ -4,14 +4,9 @@ pragma abicoder v2;
 
 import "ds-test/test.sol";
 import {Deployment, Collateral} from "../Contract.sol";
-import {MockOracle} from "../LemmaSwap/Mock/contracts/MockOracle.sol";
-import {MockPerp} from "../LemmaSwap/Mock/contracts/MockPerp.sol";
-import {Denominations} from "../LemmaSwap/Mock/libs/Denominations.sol";
-import {MockLemmaTreasury, MockUSDL} from "../LemmaSwap/Mock/contracts/MockUSDL.sol";
 import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
-import {sToken} from "../interfaces/ILemmaRouter.sol";
 import "forge-std/console.sol";
 
 
@@ -25,7 +20,6 @@ contract Minter {
     function mint(IERC20 collateral, uint256 perpDEXIndex, uint256 amount) external {
         d.askForMoney(address(collateral), amount);
         collateral.approve(address(d.usdl()), type(uint256).max);
-        // console.log("T1 ", d.usdl().perpetualDEXWrappers(0, ))
         d.usdl().depositToWExactCollateral(
             address(this),
             amount,
@@ -39,45 +33,16 @@ contract Minter {
 contract ContractTest is DSTest {
 
     Deployment public d;
-    mapping(string => bool) public runTests;
-
-    // 0 --> Local Deploy 
-    // 1 --> Optimism Kovan
-    uint256 mode;
-
-    constructor() DSTest() {
-        runTests["testOracle"]                              =       true;
-        runTests["testPerp"]                                =       true;
-        runTests["testMint"]                                =       true;
-        runTests["testSwap1"]                               =       true;
-        runTests["testSwap2"]                               =       true;
-        runTests["testSwap3"]                               =       true;
-        runTests["testSwapExactTokensForTokens"]            =       true;
-        runTests["testSwapTokensForExactTokens"]            =       true;
-        runTests["testSwapExactETHForTokens"]               =       true;
-        runTests["testswapTokensForExactETH"]               =       true;        
-        runTests["testSwapExactTokensForETH"]               =       true; 
-        runTests["testSwapETHForExactTokens"]               =       true; 
-
-        mode = 1;
-        
-    }
 
     receive() external payable {
         console.log("[ContractTest] Receive");
-        // assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
     }
 
     function setUp() public {
         d = new Deployment();
         TransferHelper.safeTransferETH(address(d), 100e18);
 
-        if(mode == 0) {
-            d.deployLocal();
-        } else {
-            d.deployTestnet(mode);
-        }
-
+        d.deployTestnet(1);
     }
 
     // Let's put some collateral 
@@ -106,11 +71,6 @@ contract ContractTest is DSTest {
     }
 
     function testSwapExactTokensForTokens() public {
-        if (!runTests["testSwapExactTokensForTokens"]) {
-            assertTrue(true);
-            return;
-        }
-
         setUpForSwap();
 
         d.askForMoney(address(d.weth()), 10e18);
@@ -139,11 +99,6 @@ contract ContractTest is DSTest {
     }
 
     function testSwapExactETHForTokens() public {
-        if (!runTests["testSwapExactETHForTokens"]) {
-            assertTrue(true);
-            return;
-        }
-
         setUpForSwap();
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
@@ -166,11 +121,6 @@ contract ContractTest is DSTest {
 
 
     function swapExactTokensForETH() public {
-        if (!runTests["swapExactTokensForETH"]) {
-            assertTrue(true);
-            return;
-        }
-
         setUpForSwap();
 
         uint256 initialAmount = 10e18;
