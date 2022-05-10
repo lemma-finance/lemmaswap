@@ -135,6 +135,7 @@ contract ContractTest is DSTest {
         );
 
         assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn );
+        assertTrue( d.wbtc().balanceOf(address(this)) > 0 );
     }
 
     function testSwapExactETHForTokens() public {
@@ -160,7 +161,7 @@ contract ContractTest is DSTest {
             address(this),
             0
         );
-
+        assertTrue( d.wbtc().balanceOf(address(this)) > 0 );
     }
 
 
@@ -172,7 +173,9 @@ contract ContractTest is DSTest {
 
         setUpForSwap();
 
-        d.askForMoney(address(d.wbtc()), 10e18);
+        uint256 initialAmount = 10e18;
+
+        d.askForMoney(address(d.wbtc()), initialAmount);
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
@@ -194,17 +197,8 @@ contract ContractTest is DSTest {
             0
         );
 
-        assertTrue( d.wbtc().balanceOf(address(this)) == 10e18 - amountIn );
+        assertTrue( d.wbtc().balanceOf(address(this)) == initialAmount - amountIn );
     }
-
-
-
-
-
-
-
-
-
 
 
 
