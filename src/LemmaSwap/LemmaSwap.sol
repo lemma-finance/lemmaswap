@@ -5,7 +5,8 @@ import {Multicall} from "@uniswap/v3-periphery/contracts/base/Multicall.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
 import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
-import "../interfaces/ILemmaRouter.sol";
+import {IERC20} from '@weth10/interfaces/IERC20.sol';
+import {ILemmaRouter} from "../interfaces/ILemmaRouter.sol";
 
 interface IERC20Decimal is IERC20 {
     function decimals() external view returns (uint256);
