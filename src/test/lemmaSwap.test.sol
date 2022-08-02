@@ -9,17 +9,21 @@ import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/Transfer
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import "forge-std/console.sol";
 
-
+interface IERC20Decimals is IERC20 {
+    function decimals() external view returns(uint256);
+}
 
 contract Minter {
     Deployment public d; 
     constructor(Deployment _d) {
         d = _d;
+        d.grantRole(address(this));
     }
 
-    function mint(IERC20 collateral, uint256 perpDEXIndex, uint256 amount) external {
+    function mint(IERC20Decimals collateral, uint256 perpDEXIndex, uint256 amount) external {
         d.askForMoney(address(collateral), amount);
         collateral.approve(address(d.usdl()), type(uint256).max);
+        amount = amount * 1e18 / (10**collateral.decimals());
         d.usdl().depositToWExactCollateral(
             address(this),
             amount,
@@ -33,33 +37,23 @@ contract Minter {
 contract ContractTest is DSTest {
 
     Deployment public d;
-
-    receive() external payable {
-        console.log("[ContractTest] Receive");
-    }
+    receive() external payable {}
 
     function setUp() public {
         d = new Deployment();
+        TransferHelper.safeTransferETH(address(this), 100e18);
         TransferHelper.safeTransferETH(address(d), 100e18);
-
         d.deployTestnet(1);
     }
 
     // Let's put some collateral 
     function setUpForSwap() public {
-        console.log("[setUpForSwap()] Trying to mint USDL with WETH");
+        // Trying to mint USDL with WETH
         Minter m1 = new Minter(d);
-        m1.mint(d.weth(), 0, 10e18);
-        console.log("[setUpForSwap()] Minting with WETH Done");
-
-        console.log("[setUpForSwap()] Trying to mint USDL with WBTC");
+        m1.mint(IERC20Decimals(address(d.weth())), 0, 1e18); // 1 ether
+        // Trying to mint USDL with WBTC
         Minter m2 = new Minter(d);
-
-        // NOTE: Using >= 10e4 results in a pretty weird 
-        // [FAIL. Reason: SafeMath: subtraction overflow] testSetupForSwap() (gas: 535585)
-        // Need to investigate it later
-        m2.mint(d.wbtc(), 1, 10e3);
-        console.log("[setUpForSwap()] Minting with WBTC Done");
+        m2.mint(IERC20Decimals(address(d.wbtc())), 1, 4374840); // 0.4374840 WBTC
     }
 
     function testSetupForSwap() public {
@@ -84,7 +78,7 @@ contract ContractTest is DSTest {
         path[0] = address(d.weth());
         path[1] = address(d.wbtc());
 
-        uint256 amountIn = 10e3;
+        uint256 amountIn = 1e17;
 
         d.lemmaSwap().swapExactTokensForTokens(
             amountIn,
@@ -108,7 +102,7 @@ contract ContractTest is DSTest {
         // path[0] = address(d.weth());
         path[0] = address(d.wbtc());
 
-        uint256 amountIn = 10e3;
+        uint256 amountIn = 1e17;
 
         d.lemmaSwap().swapExactETHForTokens{value: amountIn}(
             0,
@@ -118,7 +112,6 @@ contract ContractTest is DSTest {
         );
         assertTrue( d.wbtc().balanceOf(address(this)) > 0 );
     }
-
 
     function swapExactTokensForETH() public {
         setUpForSwap();
@@ -137,7 +130,7 @@ contract ContractTest is DSTest {
         // path[0] = address(d.weth());
         path[0] = address(d.wbtc());
 
-        uint256 amountIn = 10e2;
+        uint256 amountIn = 43721400000000000; // 0.0437214 in form of 18 decimals
 
         d.lemmaSwap().swapExactTokensForETH(
             amountIn,
@@ -149,7 +142,4 @@ contract ContractTest is DSTest {
 
         assertTrue( d.wbtc().balanceOf(address(this)) == initialAmount - amountIn );
     }
-
-
-
 }

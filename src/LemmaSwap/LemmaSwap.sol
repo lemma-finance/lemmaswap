@@ -7,10 +7,8 @@ import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
 import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
 import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {ILemmaRouter} from "../interfaces/ILemmaRouter.sol";
-
-interface IERC20Decimal is IERC20 {
-    function decimals() external view returns (uint256);
-}
+import "../interfaces/IERC20Decimals.sol";
+import "forge-std/Test.sol";
 
 contract LemmaSwap {
     address public owner;
@@ -222,7 +220,7 @@ contract LemmaSwap {
         TransferHelper.safeTransferETH(address(weth), amountIn);
         // weth.deposit{value: amountIn}();
         // console.log("[swapExactETHForTokens] After Deposit Balance = ", weth.balanceOf(address(this)));
-        require(path.length == 1, "! Multi-hop swap not supported yet");
+        // require(path.length == 1, "! Multi-hop swap not supported yet");
         uint256[] memory res = new uint256[](1);
         res[0] = _swapWithExactInput(
             address(weth),
@@ -288,7 +286,7 @@ contract LemmaSwap {
         return collateralToDexIndex[collateral] - 1;
     }
 
-    function _returnAllTokens(IERC20 token, address to) internal {
+    function _returnAllTokens(IERC20Decimals token, address to) internal {
         if (token.balanceOf(address(this)) > 0) {
             TransferHelper.safeTransfer(
                 address(token),
@@ -309,71 +307,47 @@ contract LemmaSwap {
         require(amountIn > 0, "! tokenIn amount");
 
         if (from != address(this)) {
-            TransferHelper.safeTransferFrom(
-                tokenIn,
-                from,
-                address(this),
-                amountIn
-            );
+            TransferHelper.safeTransferFrom(tokenIn, from, address(this), amountIn);
         }
 
         uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
         TransferHelper.safeTransfer(
-            tokenIn,
-            usdl.lemmaTreasury(),
-            getProtocolFeesTokenIn(tokenIn, amountIn)
+            tokenIn, usdl.lemmaTreasury(), getProtocolFeesTokenIn(tokenIn, amountIn)
         );
 
-        if (
-            IERC20(tokenIn).allowance(address(this), address(usdl)) <
-            type(uint256).max
-        ) {
-            IERC20(tokenIn).approve(address(usdl), type(uint256).max);
+        if (IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) < type(uint256).max) {
+            IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
+
+        console.log('amountIn: ', IERC20Decimals(tokenIn).balanceOf(address(this)));
 
         usdl.depositToWExactCollateral(
             address(this),
-            IERC20(tokenIn).balanceOf(address(this)),
+            IERC20Decimals(tokenIn).balanceOf(address(this)),
             _convertCollateralToValidDexIndex(tokenIn),
             0,
-            IERC20(tokenIn)
+            IERC20Decimals(tokenIn)
         );
 
         uint256 usdlAmount = usdl.balanceOf(address(this));
-
+        console.log('usdlAmount: ', usdlAmount);
         usdl.withdrawTo(
             address(this),
             usdlAmount,
             _convertCollateralToValidDexIndex(tokenOut),
             amountOutMin,
-            IERC20(tokenOut)
+            IERC20Decimals(tokenOut)
         );
-
-        uint256 protocolFeesOut = getProtocolFeesTokenOut(
-            tokenOut,
-            IERC20(tokenOut).balanceOf(address(this))
-        );
-
-        TransferHelper.safeTransfer(
-            tokenOut,
-            usdl.lemmaTreasury(),
-            protocolFeesOut
-        );
-
-        uint256 netCollateralToGetBack = IERC20(tokenOut).balanceOf(
-            address(this)
-        );
-
-        require(
-            netCollateralToGetBack >= amountOutMin,
-            "! netCollateralToGetBack"
-        );
-
+        uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
+        console.log('wbtcBal: ', wbtcBal);
+        uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut, IERC20Decimals(tokenOut).balanceOf(address(this)));
+        TransferHelper.safeTransfer(tokenOut, usdl.lemmaTreasury(), protocolFeesOut);
+        uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(address(this));
+        require(netCollateralToGetBack >= amountOutMin,"! netCollateralToGetBack");
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
-
-        _returnAllTokens(usdl, to);
-
+        _returnAllTokens(IERC20Decimals(address(usdl)), to);
         return netCollateralToGetBack;
+        return 0;
     }
 
 

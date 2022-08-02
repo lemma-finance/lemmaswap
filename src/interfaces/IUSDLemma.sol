@@ -60,5 +60,7 @@ interface IUSDLemma is IERC20 {
     function closePosition(uint256 collateralAmount, uint256 perpetualDEXIndex, IERC20 collateral) external returns (uint256, uint256);
     function burnAndTransfer(uint256 USDLToBurn, uint256 collateralAmountToGetBack, address to, IERC20 collateral) external;
 
+    function grantRole(bytes32 role, address account) external;
+
     event PerpetualDexWrapperAdded(uint256 indexed dexIndex, address indexed collateral, address dexWrapper);
 }
