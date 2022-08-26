@@ -47,6 +47,7 @@ interface IUSDLemma is IERC20 {
     ) external;
 
 
+    function perpSettlementToken() external view returns (address);
     function getFeesPerc(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
 
     function setWhiteListAddress(address _account, bool _isWhiteList) external;

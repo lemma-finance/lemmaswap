@@ -2,12 +2,15 @@
 pragma solidity 0.7.6;
 pragma abicoder v2;
 
-import "ds-test/test.sol";
+// import "ds-test/test.sol";
+import "forge-std/Test.sol";
 import {Deployment, Collateral} from "../Contract.sol";
 import {IERC20} from '@weth10/interfaces/IERC20.sol';
 import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
+import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import "forge-std/console.sol";
+// import "forge-std/Vm.sol";
 
 interface IERC20Decimals is IERC20 {
     function decimals() external view returns(uint256);
@@ -34,9 +37,10 @@ contract Minter {
     }
 }
 
-contract ContractTest is DSTest {
+contract ContractTest is Test {
 
     Deployment public d;
+    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
     receive() external payable {}
 
     function setUp() public {
@@ -44,6 +48,10 @@ contract ContractTest is DSTest {
         TransferHelper.safeTransferETH(address(this), 100e18);
         TransferHelper.safeTransferETH(address(d), 100e18);
         d.deployTestnet(1);
+
+        vm.startPrank(address(d));
+        d.feesAccumulator().grantRole(FEES_TRANSFER_ROLE, address(this));
+        vm.stopPrank();
     }
 
     // Let's put some collateral 
@@ -78,7 +86,7 @@ contract ContractTest is DSTest {
         path[0] = address(d.weth());
         path[1] = address(d.wbtc());
 
-        uint256 amountIn = 1e17;
+        uint256 amountIn = 1e13;
 
         d.lemmaSwap().swapExactTokensForTokens(
             amountIn,
@@ -90,6 +98,44 @@ contract ContractTest is DSTest {
 
         assertTrue( d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn );
         assertTrue( d.wbtc().balanceOf(address(this)) > 0 );
+    }
+
+    function testDistributeFeesForEth() public {
+        d.askForMoney(address(d.weth()), 1e12);
+        d.askForMoney(address(d.wbtc()), 1e6);
+
+        d.weth().transfer(address(d.feesAccumulator()), 1e12);
+        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+
+        d.mockUniV3Router().setRouter(address(0));
+        d.mockUniV3Router().setNextSwapAmount(1e9);
+
+        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
+        d.feesAccumulator().distibuteFees(address(d.weth()));
+        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
+        assertGt(balUsdlAfter, balUsdlBefore);
+        assertGt(balSynthAfter, balSynthBefore);
+    }
+
+    function testDistributeFeesForBtc() public {
+        d.askForMoney(address(d.weth()), 1e12);
+        d.askForMoney(address(d.wbtc()), 1e6);
+
+        d.weth().transfer(address(d.feesAccumulator()), 1e12);
+        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+
+        d.mockUniV3Router().setRouter(address(0));
+        d.mockUniV3Router().setNextSwapAmount(1e9);
+
+        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        d.feesAccumulator().distibuteFees(address(d.wbtc()));
+        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        assertGt(balUsdlAfter, balUsdlBefore);
+        assertGt(balSynthAfter, balSynthBefore);
     }
 
     function testSwapExactETHForTokens() public {

@@ -47,6 +47,8 @@ interface IUSDLSwapSubset is IERC20 {
     function lemmaTreasury() external view returns (address);
     function getFees(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
     function getTotalPosition(uint256 dexIndex, address collateral) external view returns (int256);
+    function grantRole(bytes32 role, address account) external;
+
 }
 
 

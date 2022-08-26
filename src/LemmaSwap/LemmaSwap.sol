@@ -12,22 +12,23 @@ import "forge-std/Test.sol";
 
 contract LemmaSwap {
     address public owner;
+    address public feesAccumulator;
+
     ILemmaRouter public lemmaRouter;
-
-    // Assumption: there is 1:1 collateral token to dexIndex relationship
-    mapping(address => uint8) public collateralToDexIndex;
-
+    IWETH10 public weth;
     IUSDLSwapSubset public usdl;
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
+    
+    // Assumption: there is 1:1 collateral token to dexIndex relationship
+    mapping(address => uint8) public collateralToDexIndex;
 
-     IWETH10 public weth;
-
-    constructor(address _usdl, address _weth) {
+    constructor(address _usdl, address _weth, address _feesAccumulator) {
         owner = msg.sender;
         usdl = IUSDLSwapSubset(_usdl);
         weth = IWETH10(_weth);
+        feesAccumulator = _feesAccumulator;
 
         // Initial fee is 0.1%
         lemmaSwapFees = 1000;
@@ -199,8 +200,7 @@ contract LemmaSwap {
         return res;
     }
 
-
-     /**
+    /**
         @notice     Swaps an exact amount of ETH for an amount of output tokens that is computed as a function of the input and price 
         @param      amountOutMin    The minimum amount of output token
         @param      path            An array of 2 addresses: input token and output token
@@ -208,7 +208,7 @@ contract LemmaSwap {
         @param      deadline        Currently ignored
         @dev The amountIn is the amount of ETH the msg.sender sends to this function when calling it 
         @dev https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
-     */
+    */
     function swapExactETHForTokens(
         uint256 amountOutMin,
         address[] calldata path,
@@ -266,8 +266,6 @@ contract LemmaSwap {
         return res;
     }
 
-
-
     /**
         @notice Collateral --> dexIndex
         @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship 
@@ -311,26 +309,21 @@ contract LemmaSwap {
         }
 
         uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-        TransferHelper.safeTransfer(
-            tokenIn, usdl.lemmaTreasury(), getProtocolFeesTokenIn(tokenIn, amountIn)
-        );
+        TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesIn);
+        amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
 
         if (IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) < type(uint256).max) {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
-
-        console.log('amountIn: ', IERC20Decimals(tokenIn).balanceOf(address(this)));
-
         usdl.depositToWExactCollateral(
             address(this),
-            IERC20Decimals(tokenIn).balanceOf(address(this)),
+            amountIn,
             _convertCollateralToValidDexIndex(tokenIn),
             0,
             IERC20Decimals(tokenIn)
         );
 
         uint256 usdlAmount = usdl.balanceOf(address(this));
-        console.log('usdlAmount: ', usdlAmount);
         usdl.withdrawTo(
             address(this),
             usdlAmount,
@@ -339,7 +332,6 @@ contract LemmaSwap {
             IERC20Decimals(tokenOut)
         );
         uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
-        console.log('wbtcBal: ', wbtcBal);
         uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut, IERC20Decimals(tokenOut).balanceOf(address(this)));
         TransferHelper.safeTransfer(tokenOut, usdl.lemmaTreasury(), protocolFeesOut);
         uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(address(this));
@@ -349,6 +341,4 @@ contract LemmaSwap {
         return netCollateralToGetBack;
         return 0;
     }
-
-
 }
