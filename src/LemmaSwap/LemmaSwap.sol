@@ -5,7 +5,7 @@ import {Multicall} from "@uniswap/v3-periphery/contracts/base/Multicall.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
 import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
-import {IERC20} from '@weth10/interfaces/IERC20.sol';
+import {IERC20} from "@weth10/interfaces/IERC20.sol";
 import {ILemmaRouter} from "../interfaces/ILemmaRouter.sol";
 import "../interfaces/IERC20Decimals.sol";
 import "forge-std/Test.sol";
@@ -20,11 +20,15 @@ contract LemmaSwap {
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
-    
+
     // Assumption: there is 1:1 collateral token to dexIndex relationship
     mapping(address => uint8) public collateralToDexIndex;
 
-    constructor(address _usdl, address _weth, address _feesAccumulator) {
+    constructor(
+        address _usdl,
+        address _weth,
+        address _feesAccumulator
+    ) {
         owner = msg.sender;
         usdl = IUSDLSwapSubset(_usdl);
         weth = IWETH10(_weth);
@@ -54,11 +58,14 @@ contract LemmaSwap {
         require(fees <= 1e6, "!fees");
         _;
     }
+    modifier ensure(uint deadline) {
+        require(deadline >= block.timestamp, "!trade expired");
+        _;
+    }
 
     fallback() external payable {}
 
     receive() external payable {}
-
 
     function setWETH(address _weth) external onlyOwner {
         require(_weth != address(0), "! address");
@@ -77,7 +84,6 @@ contract LemmaSwap {
         owner = _owner;
         emit NewOwner(owner);
     }
-
 
     /**
         @notice Updates the Collateral --> dexIndex association
@@ -176,7 +182,7 @@ contract LemmaSwap {
         @param      amountOutMin    The minimum amount of output token
         @param      path            An array of 2 addresses: input token and output token
         @param      to              Address receiving the output tokens
-        @param      deadline        Currently ignored
+        @param      deadline        Unix timestamp after which the transaction will revert
         @dev The msg.sender, prior to calling this function, has to approve LemmaSwap for at least the amountIn 
         @dev https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L224
      */
@@ -186,10 +192,11 @@ contract LemmaSwap {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external returns (uint256[] memory amounts) {
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
-        uint256[] memory res = new uint256[](1);
-        res[0] = _swapWithExactInput(
+        amounts = new uint[](path.length);
+        amounts[0] = amountIn;
+        amounts[1] = _swapWithExactInput(
             path[0],
             amountIn,
             path[1],
@@ -197,7 +204,6 @@ contract LemmaSwap {
             msg.sender,
             to
         );
-        return res;
     }
 
     /**
@@ -205,7 +211,7 @@ contract LemmaSwap {
         @param      amountOutMin    The minimum amount of output token
         @param      path            An array of 2 addresses: input token and output token
         @param      to              Address receiving the output tokens
-        @param      deadline        Currently ignored
+        @param      deadline        Unix timestamp after which the transaction will revert
         @dev The amountIn is the amount of ETH the msg.sender sends to this function when calling it 
         @dev https://github.com/Uniswap/v2-periphery/blob/master/contracts/UniswapV2Router02.sol#L252
     */
@@ -214,15 +220,18 @@ contract LemmaSwap {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external payable returns (uint256[] memory amounts) {
+    ) external payable ensure(deadline) returns (uint256[] memory amounts) {
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        require(path[0] == address(weth), "! Invalid path");
         uint256 amountIn = msg.value;
         // console.log("[swapExactETHForTokens] msg.value = ", msg.value);
         TransferHelper.safeTransferETH(address(weth), amountIn);
         // weth.deposit{value: amountIn}();
         // console.log("[swapExactETHForTokens] After Deposit Balance = ", weth.balanceOf(address(this)));
         // require(path.length == 1, "! Multi-hop swap not supported yet");
-        uint256[] memory res = new uint256[](1);
-        res[0] = _swapWithExactInput(
+        amounts = new uint[](path.length);
+        amounts[0] = amountIn;
+        amounts[1] = _swapWithExactInput(
             address(weth),
             amountIn,
             path[0],
@@ -230,16 +239,15 @@ contract LemmaSwap {
             address(this),
             to
         );
-        return res;
     }
 
-     /**
+    /**
         @notice     Swaps an exact amount of input tokens for an amount of ETH that is computed as a function of the input and price 
         @param      amountIn        The amount of the input token
         @param      amountOutMin    The minimum amount of ETH to get
         @param      path            An array of 1 address: the input token 
         @param      to              Address receiving the output tokens
-        @param      deadline        Currently ignored
+        @param      deadline        Unix timestamp after which the transaction will revert
         @dev The msg.sender, prior to calling this function, has to approve LemmaSwap for at least the amountIn 
      */
     function swapExactTokensForETH(
@@ -248,10 +256,12 @@ contract LemmaSwap {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external returns (uint256[] memory amounts) {
-        require(path.length == 1, "! Multi-hop swap not supported yet");
-        uint256[] memory res = new uint256[](1);
-        res[0] = _swapWithExactInput(
+    ) external ensure(deadline) returns (uint256[] memory amounts) {
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        require(path[1] == address(weth), "! Invalid path");
+        amounts = new uint[](path.length);
+        amounts[0] = amountIn;
+        amounts[1] = _swapWithExactInput(
             path[0],
             amountIn,
             address(weth),
@@ -263,7 +273,6 @@ contract LemmaSwap {
         require(wethAmount > amountOutMin, "! Amount Out Min");
         weth.withdraw(wethAmount);
         TransferHelper.safeTransferETH(to, wethAmount);
-        return res;
     }
 
     /**
@@ -305,14 +314,22 @@ contract LemmaSwap {
         require(amountIn > 0, "! tokenIn amount");
 
         if (from != address(this)) {
-            TransferHelper.safeTransferFrom(tokenIn, from, address(this), amountIn);
+            TransferHelper.safeTransferFrom(
+                tokenIn,
+                from,
+                address(this),
+                amountIn
+            );
         }
 
         uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
         TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesIn);
         amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
 
-        if (IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) < type(uint256).max) {
+        if (
+            IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
+            type(uint256).max
+        ) {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
         usdl.depositToWExactCollateral(
@@ -332,10 +349,22 @@ contract LemmaSwap {
             IERC20Decimals(tokenOut)
         );
         uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
-        uint256 protocolFeesOut = getProtocolFeesTokenOut(tokenOut, IERC20Decimals(tokenOut).balanceOf(address(this)));
-        TransferHelper.safeTransfer(tokenOut, usdl.lemmaTreasury(), protocolFeesOut);
-        uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(address(this));
-        require(netCollateralToGetBack >= amountOutMin,"! netCollateralToGetBack");
+        uint256 protocolFeesOut = getProtocolFeesTokenOut(
+            tokenOut,
+            IERC20Decimals(tokenOut).balanceOf(address(this))
+        );
+        TransferHelper.safeTransfer(
+            tokenOut,
+            usdl.lemmaTreasury(),
+            protocolFeesOut
+        );
+        uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(
+            address(this)
+        );
+        require(
+            netCollateralToGetBack >= amountOutMin,
+            "! netCollateralToGetBack"
+        );
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
         return netCollateralToGetBack;
