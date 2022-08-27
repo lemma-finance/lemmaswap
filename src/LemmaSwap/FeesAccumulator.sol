@@ -48,8 +48,6 @@ contract FeesAccumulator is AccessControl {
         _setRoleAdmin(LEMMA_SWAP, ADMIN_ROLE);
         _setRoleAdmin(FEES_TRANSFER_ROLE, ADMIN_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
-        // grantRole(LEMMA_SWAP, lemmaSwap);
-        // grantRole(FEES_TRANSFER_ROLE, lemmaSwap);
     }
 
     function setRouter(address _router) external {
@@ -117,7 +115,7 @@ contract FeesAccumulator is AccessControl {
         }
     }
 
-    function distibuteFees(address _token) external {
+    function distibuteFees(address _token, uint24 _swapFee, uint256 _swapMinAmount) external {
         require(hasRole(FEES_TRANSFER_ROLE, msg.sender), "!FEES_TRANSFER_ROLE");
         uint256 totalBalance = IERC20Decimals(_token).balanceOf(address(this));
         uint256 decimals = IERC20Decimals(_token).decimals();
@@ -143,7 +141,7 @@ contract FeesAccumulator is AccessControl {
             decimals = IERC20Decimals(usdl.perpSettlementToken()).decimals();
             IERC20Decimals(_token).approve(router, synthAmount);
 
-            collateralAmount = _swapOnUniV3(router, _path, synthAmount);
+            collateralAmount = _swapOnUniV3(router, _path, synthAmount, _swapFee, _swapMinAmount);
         }
         collateralAmount = (collateralAmount * 1e18) / (10**decimals);
 
@@ -162,18 +160,20 @@ contract FeesAccumulator is AccessControl {
     function _swapOnUniV3(
         address router,
         address[] memory path,
-        uint256 amount
+        uint256 amount,
+        uint24 _swapFee, 
+        uint256 _swapMinAmount
     ) internal returns (uint256) {
         uint256 res;
         IERC20Decimals(path[0]).approve(router, type(uint256).max);
         ISwapRouter.ExactInputSingleParams memory temp = ISwapRouter.ExactInputSingleParams({
             tokenIn: path[0],
             tokenOut: path[1],
-            fee: 3000,
+            fee: _swapFee,
             recipient: address(this),
             deadline: type(uint256).max,
             amountIn: amount,
-            amountOutMinimum: 0,
+            amountOutMinimum: _swapMinAmount,
             sqrtPriceLimitX96: 0
         });
         uint256 balanceBefore = IERC20Decimals(path[1]).balanceOf(address(this));

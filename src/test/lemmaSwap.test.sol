@@ -123,9 +123,8 @@ contract ContractTest is Test {
         d.mockUniV3Router().setNextSwapAmount(1e9);
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        d.feesAccumulator().distibuteFees(address(d.weth()));
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
+        d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
         uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
         uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
             .balanceOf(d.getAddresses().xLemmaSynthEth);
@@ -144,9 +143,8 @@ contract ContractTest is Test {
         d.mockUniV3Router().setNextSwapAmount(1e9);
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
-        d.feesAccumulator().distibuteFees(address(d.wbtc()));
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
         uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
         uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
             .balanceOf(d.getAddresses().xLemmaSynthBtc);
