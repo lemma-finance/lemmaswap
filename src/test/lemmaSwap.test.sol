@@ -154,8 +154,7 @@ contract ContractTest is Test {
         assertGt(balSynthAfter, balSynthBefore);
     }
 
-    //TODO: this test is failing for some reason
-    function testSwapExactETHForTokens() public {
+    function testSwapExactETHForTokens() public payable {
         setUpForSwap();
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
@@ -165,7 +164,7 @@ contract ContractTest is Test {
         path[0] = address(d.weth());
         path[1] = address(d.wbtc());
 
-        uint256 amountIn = 1e17;
+        uint256 amountIn = 1e13;
 
         uint256[] memory amountsOut = d.lemmaSwap().swapExactETHForTokens{
             value: amountIn

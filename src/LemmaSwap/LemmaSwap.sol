@@ -234,7 +234,7 @@ contract LemmaSwap {
         amounts[1] = _swapWithExactInput(
             address(weth),
             amountIn,
-            path[0],
+            path[1],
             amountOutMin,
             address(this),
             to
