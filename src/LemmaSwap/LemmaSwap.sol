@@ -8,7 +8,6 @@ import {IWETH10} from "../interfaces/IWETH10.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
 contract LemmaSwap is AccessControl {
-
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
@@ -304,7 +303,7 @@ contract LemmaSwap is AccessControl {
 
         if (
             IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
-            type(uint256).max
+            amountIn
         ) {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
@@ -344,6 +343,5 @@ contract LemmaSwap is AccessControl {
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
         return netCollateralToGetBack;
-        return 0;
     }
 }
