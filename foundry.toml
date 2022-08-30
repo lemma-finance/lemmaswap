@@ -5,9 +5,6 @@ libs = ['lib']
 remappings = [
     '@uniswap/v3-periphery/=lib/v3-periphery/', 
     '@openzeppelin/=lib/openzeppelin-contracts/', 
-    "@solmate=lib/solmate/", 
-    "@weth10=lib/WETH10/contracts/",
-    "@util-contracts=lib/util-contracts"
     ]
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config

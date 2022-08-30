@@ -11,6 +11,14 @@ We are using the basis-trading-stablecoin underlying protocol to swap tokens.
 ```
 forge install
 ```
+ 
+or
+
+```
+forge install foundry-rs/forge-std
+forge install Uniswap/v3-periphery
+forge install Openzeppelin/openzeppelin-contracts
+```
 
 2. Use 
 
