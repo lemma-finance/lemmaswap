@@ -209,7 +209,7 @@ contract LemmaSwap is AccessControl {
         amounts[1] = _swapWithExactInput(
             address(weth),
             msg.value,
-            path[0],
+            path[1],
             amountOutMin,
             address(this),
             to
