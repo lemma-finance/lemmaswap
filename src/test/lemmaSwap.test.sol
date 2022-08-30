@@ -1,21 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
-// import "ds-test/test.sol";
-import "forge-std/Test.sol";
-import {Deployment, Collateral} from "../Contract.sol";
-import {IERC20} from "@weth10/interfaces/IERC20.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
-import "forge-std/console.sol";
-
-// import "forge-std/Vm.sol";
-
-interface IERC20Decimals is IERC20 {
-    function decimals() external view returns (uint256);
-}
+import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
+import {Deployment, Collateral} from "../Contract.sol";
+import "forge-std/Test.sol";
 
 contract Minter {
     Deployment public d;
@@ -38,15 +29,15 @@ contract Minter {
             amount,
             perpDEXIndex,
             0,
-            address(collateral)
+            collateral
         );
     }
 }
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE =
-        keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     receive() external payable {}
 

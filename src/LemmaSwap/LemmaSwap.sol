@@ -1,22 +1,20 @@
-pragma solidity ^0.7.6;
-pragma abicoder v2;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
-import {Multicall} from "@uniswap/v3-periphery/contracts/base/Multicall.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
-import {IUSDLSwapSubset} from "../interfaces/IUSDLSwapSubset.sol";
-import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
-import {IERC20} from "@weth10/interfaces/IERC20.sol";
-import {ILemmaRouter} from "../interfaces/ILemmaRouter.sol";
-import "../interfaces/IERC20Decimals.sol";
-import "forge-std/Test.sol";
+import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+import {IWETH10} from "../interfaces/IWETH10.sol";
+import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
-contract LemmaSwap {
-    address public owner;
+contract LemmaSwap is AccessControl {
+
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+
     address public feesAccumulator;
-
-    ILemmaRouter public lemmaRouter;
     IWETH10 public weth;
-    IUSDLSwapSubset public usdl;
+    IUSDLemma public usdl;
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
@@ -29,8 +27,9 @@ contract LemmaSwap {
         address _weth,
         address _feesAccumulator
     ) {
-        owner = msg.sender;
-        usdl = IUSDLSwapSubset(_usdl);
+        _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
+        _setupRole(ADMIN_ROLE, msg.sender);
+        usdl = IUSDLemma(_usdl);
         weth = IWETH10(_weth);
         feesAccumulator = _feesAccumulator;
 
@@ -38,16 +37,9 @@ contract LemmaSwap {
         lemmaSwapFees = 1000;
     }
 
-    event NewOwner(address);
     event NewUSDL(address);
-    event NewWETH(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "!owner");
-        _;
-    }
 
     modifier validCollateral(address collateral) {
         require(collateral != address(0), "!collateral");
@@ -58,6 +50,7 @@ contract LemmaSwap {
         require(fees <= 1e6, "!fees");
         _;
     }
+
     modifier ensure(uint deadline) {
         require(deadline >= block.timestamp, "!trade expired");
         _;
@@ -67,22 +60,10 @@ contract LemmaSwap {
 
     receive() external payable {}
 
-    function setWETH(address _weth) external onlyOwner {
-        require(_weth != address(0), "! address");
-        weth = IWETH10(_weth);
-        emit NewWETH(address(weth));
-    }
-
-    function setUSDL(address _usdl) external onlyOwner {
+    function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
         require(_usdl != address(0), "! address");
-        usdl = IUSDLSwapSubset(_usdl);
+        usdl = IUSDLemma(_usdl);
         emit NewUSDL(address(usdl));
-    }
-
-    function setOwner(address _owner) external onlyOwner {
-        require(_owner != address(0), "! address");
-        owner = _owner;
-        emit NewOwner(owner);
     }
 
     /**
@@ -91,7 +72,7 @@ contract LemmaSwap {
      */
     function setCollateralToDexIndex(address collateral, uint8 dexIndex)
         external
-        onlyOwner
+        onlyRole(OWNER_ROLE)
         validCollateral(collateral)
     {
         collateralToDexIndex[collateral] = dexIndex + 1;
@@ -104,9 +85,8 @@ contract LemmaSwap {
      */
     function setLemmaSwapFees(uint256 _fees)
         external
-        onlyOwner
+        onlyRole(OWNER_ROLE)
         validFees(_fees)
-        onlyOwner
     {
         lemmaSwapFees = _fees;
         emit NewLemmaSwapFees(lemmaSwapFees);
@@ -223,17 +203,12 @@ contract LemmaSwap {
     ) external payable ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
-        uint256 amountIn = msg.value;
-        // console.log("[swapExactETHForTokens] msg.value = ", msg.value);
-        TransferHelper.safeTransferETH(address(weth), amountIn);
-        // weth.deposit{value: amountIn}();
-        // console.log("[swapExactETHForTokens] After Deposit Balance = ", weth.balanceOf(address(this)));
-        // require(path.length == 1, "! Multi-hop swap not supported yet");
+        weth.deposit();
         amounts = new uint[](path.length);
-        amounts[0] = amountIn;
+        amounts[0] = msg.value;
         amounts[1] = _swapWithExactInput(
             address(weth),
-            amountIn,
+            msg.value,
             path[0],
             amountOutMin,
             address(this),
@@ -303,6 +278,7 @@ contract LemmaSwap {
         }
     }
 
+    /// @notice _swapWithExactInput internal method to swap tokenIn -> tokenOut
     function _swapWithExactInput(
         address tokenIn,
         uint256 amountIn,
@@ -337,7 +313,7 @@ contract LemmaSwap {
             amountIn,
             _convertCollateralToValidDexIndex(tokenIn),
             0,
-            IERC20Decimals(tokenIn)
+            IERC20(tokenIn)
         );
 
         uint256 usdlAmount = usdl.balanceOf(address(this));
@@ -346,7 +322,7 @@ contract LemmaSwap {
             usdlAmount,
             _convertCollateralToValidDexIndex(tokenOut),
             amountOutMin,
-            IERC20Decimals(tokenOut)
+            IERC20(tokenOut)
         );
         uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
         uint256 protocolFeesOut = getProtocolFeesTokenOut(

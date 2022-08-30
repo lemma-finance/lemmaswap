@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.7.6;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
-import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
+import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from '@weth10/interfaces/IERC20.sol';
-import {IWETH10} from "@weth10/interfaces/IWETH10.sol";
-import {WETH10} from "@weth10/WETH10.sol";
-import {TransferHelper} from '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IWETH10} from "../interfaces/IWETH10.sol";
+import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
+import {IXUSDL} from "./interfaces/IXUSDL.sol";
+import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 import {FeesAccumulator} from "./LemmaSwap/FeesAccumulator.sol";
-import {IXUSDL} from "./interfaces/IXUSDL.sol";
-import "./interfaces/ISwapRouter.sol";
-
-// NOTE: Needed for cheatcodes like `deal()` to get money
 import "forge-std/Test.sol";
 
 contract Collateral is ERC20 {
@@ -109,7 +105,10 @@ contract Deployment is Test {
     IWETH10 public weth;
     MockUniV3Router public mockUniV3Router;
     address public admin;
+
     bytes32 public constant LEMMA_SWAP = keccak256("LEMMA_SWAP");
+    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     ISwapRouter public routerUniV3;
     Bank public bank = new Bank();
@@ -177,6 +176,7 @@ contract Deployment is Test {
 
 
         lemmaSwap = new LemmaSwap(address(usdl), address(weth), admin);
+        lemmaSwap.grantRole(OWNER_ROLE, address(this));
         lemmaSwap.setCollateralToDexIndex(address(weth), 0);
         lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
 
@@ -185,13 +185,13 @@ contract Deployment is Test {
         vm.stopPrank();
 
         feesAccumulator = new FeesAccumulator(address(mockUniV3Router), IXUSDL(testnet_optimism_kovan.xusdl));
+        feesAccumulator.grantRole(OWNER_ROLE, address(this));
 
         feesAccumulator.setCollateralToDexIndexForUsdl(testnet_optimism_kovan.WETH, 0);
         feesAccumulator.setCollateralToDexIndexForUsdl(testnet_optimism_kovan.WBTC, 1);
 
         feesAccumulator.setCollateralToSynth(testnet_optimism_kovan.WETH, 0xE12d67F8529789988b153027366862AFa060D55c, 0xE920E05551b3718ae5B1f26d7462974FefdF77F3);
         feesAccumulator.setCollateralToSynth(testnet_optimism_kovan.WBTC, 0xD885FD5ACAD3eA15b6FCC7CEc4B638a8E030B24d, 0x6b29B40D8583e5df5EE657345AAf62f18dEc2A1D);
-        // lemmaSwap.setUSDL(address(usdl));
     }
     
     function askForMoney(address collateral, uint256 amount) external {

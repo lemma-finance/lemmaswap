@@ -1,4 +1,5 @@
-pragma solidity ^0.7.6;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.0;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
@@ -24,7 +25,7 @@ interface IUSDLemma is IERC20 {
         uint256 collateralAmount,
         uint256 perpetualDEXIndex,
         uint256 minUSDLToMint,
-        address collateral
+        IERC20 collateral
     ) external;
 
     function withdrawToWExactCollateral(
@@ -62,6 +63,9 @@ interface IUSDLemma is IERC20 {
     function burnAndTransfer(uint256 USDLToBurn, uint256 collateralAmountToGetBack, address to, IERC20 collateral) external;
 
     function grantRole(bytes32 role, address account) external;
+    function getFees(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
+    function getTotalPosition(uint256 dexIndex, address collateral) external view returns (int256);
+    function lemmaTreasury() external view returns (address);
 
     event PerpetualDexWrapperAdded(uint256 indexed dexIndex, address indexed collateral, address dexWrapper);
 }

@@ -1,99 +1,18 @@
 
 # LemmaSwap
 
-## Status 
-
-I am now testing using the Optimism Kovan Testnet setup 
-
-Currently I am focusing on this test 
-
-```
-forge test --fork-url https://kovan.optimism.io -m testSwap1
-```
-
-According to the trace I get, I can mint with WETH and WBTC successfully, so it means I can put collateral in the Perp Protocol 
-
-
+LemmaSwap is to swap tokens for Erc20-Erc20, Eth-Erc20 and Erc20-Eth.
+We are using the basis-trading-stablecoin underlying protocol to swap tokens. 
 
 ## Instructions 
 
 1. Installation
 
-1.1 Install Foundry with 
-
 ```
-curl -L https://foundry.paradigm.xyz | bash
-source /home/nicolabernini/.bashrc
-foundryup
+forge install
 ```
 
-
-
-
-
-1.2 Install Deps 
-
-1.2.1 Install forge-std
-
-```
-forge install foundry-rs/forge-std
-```
-
-It is Forge Standard Library and contains useful stuff like `console.log()` command 
-
-
-
-1.2.2 Install UniswapV3 Periphery 
-
-```
-forge install Uniswap/v3-periphery
-```
-
-
-
-1.2.3 Install OpenZeppelin Contracts 
-
-```
-forge install Openzeppelin/openzeppelin-contracts
-```
-
-Change the branch to `solc-0.7` for the compatibility with the Solidity Version used in the rest of the contracts running 
-
-```
-cd lib/openzeppelin-contracts/
-git checkout solc-0.7
-cd ../..
-```
-
-
-
-
-
-1.2.4 Install Solmate 
-
-```
-forge install Rari-Capital/solmate
-```
-
-
-
-2. Initialize Foundry Project with 
-
-```
-forge init
-```
-
-If the dir is not empty, use 
-
-```
-forge init --force
-```
-
-
-
-
-
-3. Use 
+2. Use 
 
 3.1 Build 
 
@@ -111,20 +30,5 @@ Adjust verbosity with
 
 ```
 forge test -vvv
+forge test --fork-url https://kovan.optimism.io -m testSwap1
 ```
-
-The more the `v` and the higher the verbosity 
-
-To see the logs you need at least `-vvv` level
-
-
-
-
-
-
-
-
-
-
-
-

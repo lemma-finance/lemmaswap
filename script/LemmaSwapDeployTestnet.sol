@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 // pragma solidity >=0.6.0 <0.9.0;
-pragma solidity ^0.7.6;
+pragma solidity >=0.7.6;
 pragma abicoder v2;
 
 import {LemmaSwap} from "../src/LemmaSwap/LemmaSwap.sol";
 import {FeesAccumulator} from "../src/LemmaSwap/FeesAccumulator.sol";
 import {IXUSDL} from "../src/interfaces/IXUSDL.sol";
-import {IUSDLSwapSubset} from "../src/interfaces/IUSDLSwapSubset.sol";
+import {IUSDLemma} from "../src/interfaces/IUSDLemma.sol";
 import "forge-std/Script.sol";
 
 contract LemmaSwapDeployTestnet is Script {
@@ -28,13 +28,13 @@ contract LemmaSwapDeployTestnet is Script {
 
     address optimismKovanUniV3Router = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // Optimism Kovan 
 
-    IUSDLSwapSubset usdLemma;
+    IUSDLemma usdLemma;
     LemmaSwap lemmaSwap;
     FeesAccumulator feesAccumulator;
 
     function run() external {
         vm.startBroadcast(tx.origin);
-        usdLemma = IUSDLSwapSubset(usdLemmaAddress);
+        usdLemma = IUSDLemma(usdLemmaAddress);
         lemmaSwap = new LemmaSwap(usdLemmaAddress, usdlCollateralWeth, msg.sender);
         lemmaSwap.setCollateralToDexIndex(usdlCollateralWeth, 0);
         lemmaSwap.setCollateralToDexIndex(usdlCollateralWbtc, 1);
