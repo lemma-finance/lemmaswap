@@ -203,7 +203,7 @@ contract LemmaSwap is AccessControl {
     ) external payable ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
-        weth.deposit();
+        weth.deposit{value: msg.value}();
         amounts = new uint[](path.length);
         amounts[0] = msg.value;
         amounts[1] = _swapWithExactInput(
