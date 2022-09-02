@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IWETH10} from "../src/interfaces/IWETH10.sol";
+import {IWETH9} from "../src/interfaces/IWETH9.sol";
 import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
 import {IXUSDL} from "./interfaces/IXUSDL.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
@@ -156,7 +156,7 @@ contract Deployment is Test {
     IUSDLemma public usdl;
     LemmaSwap public lemmaSwap;
     FeesAccumulator public feesAccumulator;
-    IWETH10 public weth;
+    IWETH9 public weth;
     MockUniV3Router public mockUniV3Router;
     address public admin;
 
@@ -237,9 +237,9 @@ contract Deployment is Test {
     function deployTestnet(uint256 mode) external {
         s_testnet memory testnet = testnet_optimism_kovan;
 
-        weth = IWETH10(testnet.WETH);
+        weth = IWETH9(testnet.WETH);
         TransferHelper.safeTransferETH(address(weth), 100e18);
-        wbtc = IWETH10(testnet.WBTC);
+        wbtc = IWETH9(testnet.WBTC);
         deal(address(wbtc), address(this), 1e8);
 
         usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);

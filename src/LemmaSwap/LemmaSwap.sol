@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
-import {IWETH10} from "../interfaces/IWETH10.sol";
+import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
 contract LemmaSwap is AccessControl {
@@ -12,7 +12,7 @@ contract LemmaSwap is AccessControl {
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     address public feesAccumulator;
-    IWETH10 public weth;
+    IWETH9 public weth;
     IUSDLemma public usdl;
 
     // Fees in 1e6 format: 1e6 is 100%
@@ -29,7 +29,7 @@ contract LemmaSwap is AccessControl {
         _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
         usdl = IUSDLemma(_usdl);
-        weth = IWETH10(_weth);
+        weth = IWETH9(_weth);
         feesAccumulator = _feesAccumulator;
 
         // Initial fee is 0.1%
@@ -55,9 +55,9 @@ contract LemmaSwap is AccessControl {
         _;
     }
 
-    fallback() external payable {}
-
-    receive() external payable {}
+    receive() external payable {
+        assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
+    }
 
     function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
         require(_usdl != address(0), "! address");
