@@ -36,10 +36,17 @@ contract Minter {
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE =
+        keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     receive() external payable {}
+
+    modifier noAsstesLeft() {
+        _;
+        assertTrue(d.weth().balanceOf(address(d.lemmaSwap())) == 0);
+        assertTrue(d.wbtc().balanceOf(address(d.lemmaSwap())) == 0);
+    }
 
     function setUp() public {
         d = new Deployment();
@@ -66,11 +73,11 @@ contract ContractTest is Test {
         setUpForSwap();
     }
 
-    function testPayable() public {
+    function testFailPayable() public {
         TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
     }
 
-    function testSwapExactTokensForTokens() public {
+    function testSwapExactTokensForTokens() public noAsstesLeft {
         setUpForSwap();
 
         d.askForMoney(address(d.weth()), 10e18);
@@ -103,7 +110,7 @@ contract ContractTest is Test {
         );
     }
 
-    function testDistributeFeesForEth() public {
+    function testDistributeFeesForEth() public noAsstesLeft {
         d.askForMoney(address(d.weth()), 1e12);
         d.askForMoney(address(d.wbtc()), 1e6);
 
@@ -114,7 +121,8 @@ contract ContractTest is Test {
         d.mockUniV3Router().setNextSwapAmount(1e9);
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+            .balanceOf(d.getAddresses().xLemmaSynthEth);
         d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
         uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
         uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
@@ -123,7 +131,7 @@ contract ContractTest is Test {
         assertGt(balSynthAfter, balSynthBefore);
     }
 
-    function testDistributeFeesForBtc() public {
+    function testDistributeFeesForBtc() public noAsstesLeft {
         d.askForMoney(address(d.weth()), 1e12);
         d.askForMoney(address(d.wbtc()), 1e6);
 
@@ -134,7 +142,8 @@ contract ContractTest is Test {
         d.mockUniV3Router().setNextSwapAmount(1e9);
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
+            .balanceOf(d.getAddresses().xLemmaSynthBtc);
         d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
         uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
         uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
@@ -143,7 +152,7 @@ contract ContractTest is Test {
         assertGt(balSynthAfter, balSynthBefore);
     }
 
-    function testSwapExactETHForTokens() public payable {
+    function testSwapExactETHForTokens() public payable noAsstesLeft {
         setUpForSwap();
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
@@ -165,7 +174,7 @@ contract ContractTest is Test {
         );
     }
 
-    function swapExactTokensForETH() public {
+    function swapExactTokensForETH() public noAsstesLeft {
         setUpForSwap();
 
         uint256 initialAmount = 10e18;
