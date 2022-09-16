@@ -6,7 +6,15 @@ import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 import {Deployment, Collateral} from "../Contract.sol";
+import {IPerpVault} from "../interfaces/IPerpVault.sol";
 import "forge-std/Test.sol";
+
+interface IPerpLemma {
+    function isUsdlCollateralTailAsset() external view returns(bool);
+    function setIsUsdlCollateralTailAsset(bool _x) external;
+    function getAccountValue() external view returns (int256 value_1e18);
+    function getIndexPrice() external view returns (uint256 price);
+}
 
 contract Minter {
     Deployment public d;
@@ -47,6 +55,11 @@ contract ContractTest is Test {
         TransferHelper.safeTransferETH(address(d), 100e18);
         d.deployTestnet(1);
 
+        address perpLemma = d.usdl().perpetualDEXWrappers(1, address(d.wbtc()));
+        vm.startPrank(0x70Be17A1D2C66071c5ff4D31CF5e513E985aBcEE);
+        IPerpLemma(perpLemma).setIsUsdlCollateralTailAsset(true);
+        vm.stopPrank();
+
         vm.startPrank(address(d));
         d.feesAccumulator().grantRole(FEES_TRANSFER_ROLE, address(this));
         vm.stopPrank();
@@ -60,6 +73,28 @@ contract ContractTest is Test {
         // Trying to mint USDL with WBTC
         Minter m2 = new Minter(d);
         m2.mint(IERC20Decimals(address(d.wbtc())), 1, 4374840); // 0.4374840 WBTC
+    }
+
+    // for e.g if we want to swap weth -> wbtc
+    // then tokenIn => weth AND tokenOut => wbtc
+    function getMaxAmountInUsedForFuzzing(uint256 tokenInIndex, uint256 tokenOutIndex, address tokenIn, address tokenOut) internal view returns(uint256){
+        address perpLemmaIn = d.usdl().perpetualDEXWrappers(tokenInIndex, tokenIn);
+        address perpLemmaOut = d.usdl().perpetualDEXWrappers(tokenOutIndex, tokenOut);
+        uint256 tokenOutDeposited;
+        if (IPerpLemma(perpLemmaOut).isUsdlCollateralTailAsset()) {
+            tokenOutDeposited = d.wbtc().balanceOf(perpLemmaOut);
+        } else {
+            int256 tempTokenOutDeposited = IPerpVault(d.perpVault()).getBalanceByToken(perpLemmaOut, tokenOut);
+            tempTokenOutDeposited = tempTokenOutDeposited < 0 ? tempTokenOutDeposited*(-1) : tempTokenOutDeposited;
+            tokenOutDeposited = uint256(tempTokenOutDeposited);
+        }
+        uint256 indexPriceOfTokenIn = IPerpLemma(perpLemmaIn).getIndexPrice(); 
+        uint256 indexPriceOfTokenOut = IPerpLemma(perpLemmaOut).getIndexPrice(); 
+        uint256 tokenOutDecimal = IERC20Decimals(address(d.wbtc())).decimals();
+        tokenOutDeposited = tokenOutDeposited * 1e18 / (10**tokenOutDecimal);
+        uint256 totalUsdcInTermOfTokenOut =  uint256(tokenOutDeposited) *  uint256(indexPriceOfTokenOut) / 1e18;
+        uint256 maxTokenInUsed = totalUsdcInTermOfTokenOut * 1e18 / indexPriceOfTokenIn;
+        return maxTokenInUsed;
     }
 
     function testSetupForSwap() public {
@@ -93,6 +128,8 @@ contract ContractTest is Test {
             address(this),
             block.timestamp
         );
+
+        console.log('amountsOut:', amountsOut[1]);
 
         assertTrue(
             d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn
@@ -197,6 +234,41 @@ contract ContractTest is Test {
         );
         assertTrue(
             d.weth().balanceOf(address(this)) == initialAmount + amountsOut[1]
+        );
+    }
+
+    function testFuzzSwapExactTokensForTokens(uint256 amountIn) public {
+        setUpForSwap();
+
+        uint256 maxTokenInUsed = getMaxAmountInUsedForFuzzing(0, 1 , address(d.weth()), address(d.wbtc()));
+        vm.assume(amountIn > 1e6);
+        vm.assume(amountIn < maxTokenInUsed);
+
+        d.askForMoney(address(d.weth()), 10e18);
+
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
+
+        d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
+
+        address[] memory path = new address[](2);
+        path[0] = address(d.weth());
+        path[1] = address(d.wbtc());
+
+        uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForTokens(
+            amountIn,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        assertTrue(
+            d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn
+        );
+        assertTrue(
+            d.wbtc().balanceOf(address(this)) ==
+                wbtcInitialBalance + amountsOut[1]
         );
     }
 }

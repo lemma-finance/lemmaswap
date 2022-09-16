@@ -94,7 +94,6 @@ contract MockUniV3Router {
             return nextAmount;
         }
     }
-
 }
 
 contract Deployment is Test {
@@ -132,7 +131,14 @@ contract Deployment is Test {
     // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L36
     s_testnet public testnet_optimism_kovan;
 
+    address public perpVault;
+    address public accountBalance;
+
     constructor() {
+
+        perpVault = 0xB0ff090d04c268ABb26450ba749f0497EFA9Bb7C;
+        accountBalance = 0x594ADf28b465612DB033C1aEF4bd19972343934D;
+
         routerUniV3 = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);// UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
         admin = 0x70Be17A1D2C66071c5ff4D31CF5e513E985aBcEE;
