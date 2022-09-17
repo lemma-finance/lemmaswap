@@ -34,7 +34,7 @@ contract LemmaSwapDeployTestnet is Script {
 
     function run() external {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.log.json");
+        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.script.json");
         string memory json = vm.readFile(path);
         bytes memory addresses = json.parseRaw(".Addresses[0]");
 

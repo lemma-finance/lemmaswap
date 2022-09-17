@@ -63,7 +63,7 @@ contract ContractTest is Test {
         d.deployTestnet(1);
 
         address perpLemma = d.usdl().perpetualDEXWrappers(1, address(d.wbtc()));
-        vm.startPrank(0x70Be17A1D2C66071c5ff4D31CF5e513E985aBcEE);
+        vm.startPrank(d.admin());
         IPerpLemma(perpLemma).setIsUsdlCollateralTailAsset(true);
         vm.stopPrank();
 

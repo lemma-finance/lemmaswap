@@ -11,6 +11,7 @@ import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 import {FeesAccumulator} from "./LemmaSwap/FeesAccumulator.sol";
 import "forge-std/Test.sol";
+import "forge-std/StdJson.sol";
 
 contract Collateral is ERC20 {
     constructor(
@@ -152,6 +153,7 @@ contract MockUniV3Router {
 }
 
 contract Deployment is Test {
+    using stdJson for string;
     IERC20 public wbtc;
     IUSDLemma public usdl;
     LemmaSwap public lemmaSwap;
@@ -172,6 +174,26 @@ contract Deployment is Test {
 
     receive() external payable {}
 
+    struct LemmaAddresses {
+        address a_LemmaSynthBtc;
+        address b_LemmaSynthEth;
+        address c_optimismKovanUniV3Router;
+        address d_settlementTokenManagerAddress;
+        address e_usdc;
+        address f_usdlCollateralWbtc;
+        address g_usdlCollateralWeth;
+        address h_usdLemmaAddress;
+        address i_xLemmaSynthBtc;
+        address j_xLemmaSynthEth;
+        address k_xUSDLAddress;
+    }
+
+    struct PerpAddresses {
+        address a_perpVault;
+        address b_accountBalance;
+        address c_admin;
+    }
+
     struct s_testnet {
         address WETH;
         address WBTC;
@@ -187,54 +209,60 @@ contract Deployment is Test {
     // Take Addresses from
     // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L36
     s_testnet public testnet_optimism_kovan;
+    LemmaAddresses public lemmaAddresses;
+    PerpAddresses public perpAddresses;
 
     address public perpVault;
     address public accountBalance;
 
     constructor() {
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.test.json");
+        string memory json = vm.readFile(path);
+        bytes memory _lemmaAddresses = json.parseRaw(".Addresses[0]");
+        bytes memory _perpAddresses = json.parseRaw(".Addresses[1]");
 
-        perpVault = 0xB0ff090d04c268ABb26450ba749f0497EFA9Bb7C;
-        accountBalance = 0x594ADf28b465612DB033C1aEF4bd19972343934D;
+        lemmaAddresses = abi.decode(_lemmaAddresses, (LemmaAddresses));
+        perpAddresses = abi.decode(_perpAddresses, (PerpAddresses));
 
-        routerUniV3 = ISwapRouter(0xE592427A0AEce92De3Edee1F18E0157C05861564);// UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
+        perpVault = perpAddresses.a_perpVault;
+        accountBalance = perpAddresses.b_accountBalance;
+
+        routerUniV3 = ISwapRouter(lemmaAddresses.c_optimismKovanUniV3Router);// UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
-        admin = 0x70Be17A1D2C66071c5ff4D31CF5e513E985aBcEE;
+        admin = perpAddresses.c_admin;
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L45
         testnet_optimism_kovan.WETH = address(
-            0x4200000000000000000000000000000000000006
+            lemmaAddresses.g_usdlCollateralWeth
         );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L49
         testnet_optimism_kovan.WBTC = address(
-            0xf69460072321ed663Ad8E69Bc15771A57D18522d
+            lemmaAddresses.f_usdlCollateralWbtc
         );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L41
         testnet_optimism_kovan.USDC = address(
-            0x3e22e37Cb472c872B5dE121134cFD1B57Ef06560
+            lemmaAddresses.e_usdc
         );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L307
         // testnet_optimism_kovan.USDLemma = address(0xc34E7f18185b381d1d7aab8aeEC507e01f4276EE);
         testnet_optimism_kovan.USDLemma = address(
-            0x3e193e134eF0f9187b07cbD6d0DBaD56E1B5542B
+            lemmaAddresses.h_usdLemmaAddress
         );
         testnet_optimism_kovan.xusdl = address(
-            0xB99f3c4fFc33E61aD1F060f9aF393b2f578dA6A4
+            lemmaAddresses.k_xUSDLAddress
         );
 
         // testnet_optimism_kovan.LemmaSynthEth = 0xac7b51F1D5Da49c64fAe5ef7D5Dc2869389A46FC;
         // testnet_optimism_kovan.LemmaSynthBtc = 0x72D43D1A52599289eDBE0c98342c6ED22eB85bd3;
 
-        testnet_optimism_kovan
-            .xLemmaSynthEth = 0xE920E05551b3718ae5B1f26d7462974FefdF77F3;
-        testnet_optimism_kovan
-            .xLemmaSynthBtc = 0x6b29B40D8583e5df5EE657345AAf62f18dEc2A1D;
+        testnet_optimism_kovan.xLemmaSynthEth = lemmaAddresses.j_xLemmaSynthEth;
+        testnet_optimism_kovan.xLemmaSynthBtc = lemmaAddresses.i_xLemmaSynthBtc;
 
-        testnet_optimism_kovan
-            .LemmaSynthEth = 0xE12d67F8529789988b153027366862AFa060D55c;
-        testnet_optimism_kovan
-            .LemmaSynthBtc = 0xD885FD5ACAD3eA15b6FCC7CEc4B638a8E030B24d;
+        testnet_optimism_kovan.LemmaSynthEth = lemmaAddresses.b_LemmaSynthEth;
+        testnet_optimism_kovan.LemmaSynthBtc = lemmaAddresses.a_LemmaSynthBtc;
     }
 
     function getAddresses() public view returns (s_testnet memory) {
@@ -277,13 +305,13 @@ contract Deployment is Test {
 
         feesAccumulator.setCollateralToSynth(
             testnet_optimism_kovan.WETH,
-            0xE12d67F8529789988b153027366862AFa060D55c,
-            0xE920E05551b3718ae5B1f26d7462974FefdF77F3
+            testnet_optimism_kovan.LemmaSynthEth,
+            testnet_optimism_kovan.xLemmaSynthEth
         );
         feesAccumulator.setCollateralToSynth(
             testnet_optimism_kovan.WBTC,
-            0xD885FD5ACAD3eA15b6FCC7CEc4B638a8E030B24d,
-            0x6b29B40D8583e5df5EE657345AAf62f18dEc2A1D
+            testnet_optimism_kovan.LemmaSynthBtc,
+            testnet_optimism_kovan.xLemmaSynthBtc
         );
     }
 
