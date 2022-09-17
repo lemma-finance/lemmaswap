@@ -2,6 +2,7 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
+fs_permissions = [{ access = "read", path = "./"}]
 remappings = [
     '@uniswap/v3-periphery/=lib/v3-periphery/', 
     '@openzeppelin/=lib/openzeppelin-contracts/', 

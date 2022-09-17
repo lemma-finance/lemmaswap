@@ -41,6 +41,7 @@ contract FeesAccumulator is AccessControl {
         _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(FEES_TRANSFER_ROLE, ADMIN_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
+        grantRole(OWNER_ROLE, msg.sender);
     }
 
     /// @notice setRouter will set swapping router

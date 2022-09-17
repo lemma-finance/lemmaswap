@@ -28,6 +28,7 @@ contract LemmaSwap is AccessControl {
     ) {
         _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
+        grantRole(OWNER_ROLE, msg.sender);
         usdl = IUSDLemma(_usdl);
         weth = IWETH9(_weth);
         feesAccumulator = _feesAccumulator;
