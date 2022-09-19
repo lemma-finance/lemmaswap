@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.14;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
@@ -51,7 +51,7 @@ contract LemmaSwap is AccessControl {
         _;
     }
 
-    modifier ensure(uint deadline) {
+    modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "!trade expired");
         _;
     }
@@ -174,7 +174,7 @@ contract LemmaSwap is AccessControl {
         uint256 deadline
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
             path[0],
@@ -204,7 +204,7 @@ contract LemmaSwap is AccessControl {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = msg.value;
         amounts[1] = _swapWithExactInput(
             address(weth),
@@ -234,7 +234,7 @@ contract LemmaSwap is AccessControl {
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[1] == address(weth), "! Invalid path");
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
             path[0],

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.14;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
@@ -9,10 +9,10 @@ import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
 
 contract FeesAccumulator is AccessControl {
-
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
-    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE =
+        keccak256("FEES_TRANSFER_ROLE");
 
     IUSDLemma public usdl;
     IXUSDL public xusdl;
@@ -45,13 +45,13 @@ contract FeesAccumulator is AccessControl {
     }
 
     /// @notice setRouter will set swapping router
-    function setRouter(address _router) external onlyRole(OWNER_ROLE)  {
+    function setRouter(address _router) external onlyRole(OWNER_ROLE) {
         require(_router != address(0), "!_router");
         router = _router;
     }
 
     /// @notice Updates the Collateral --> dexIndex association as per USDLemma Contract
-    /// @dev The dexIndex is a low level detail that we won't to hide from the UX related methods 
+    /// @dev The dexIndex is a low level detail that we won't to hide from the UX related methods
     function setCollateralToDexIndexForUsdl(address collateral, uint8 dexIndex)
         external
         onlyRole(OWNER_ROLE)
@@ -61,7 +61,7 @@ contract FeesAccumulator is AccessControl {
     }
 
     /// @notice Updates the Collateral --> dexIndex association as per LemmaSynth Contract
-    /// @dev The dexIndex is a low level detail that we won't to hide from the UX related methods 
+    /// @dev The dexIndex is a low level detail that we won't to hide from the UX related methods
     function setCollateralToDexIndexForSynth(address collateral, uint8 dexIndex)
         external
         onlyRole(OWNER_ROLE)
@@ -71,11 +71,11 @@ contract FeesAccumulator is AccessControl {
     }
 
     /// @notice set LemmaSynth and xLemmaSynth address for collateral
-    function setCollateralToSynth(address collateral, address lemmaSynth, address xLemmaSynth)
-        external
-        onlyRole(OWNER_ROLE)
-        validCollateral(collateral)
-    {
+    function setCollateralToSynth(
+        address collateral,
+        address lemmaSynth,
+        address xLemmaSynth
+    ) external onlyRole(OWNER_ROLE) validCollateral(collateral) {
         synthMapping[collateral].synthAddress = lemmaSynth;
         synthMapping[collateral].xSynthAddress = xLemmaSynth;
     }
@@ -83,12 +83,16 @@ contract FeesAccumulator is AccessControl {
     /// @notice distibuteFees function will distribute fees of any token between xUsdl and xLemmaSynth contract address
     /// @param _token erc20 tokenAddress to tranfer as a gees betwwn xUsdl and xLemmaSynth
     /// @param _swapFee is a feeTier(e.g. 3000) will use to swap _token to USDC
-    /// @param _swapMinAmount minAmount need to get if swap happens 
-    function distibuteFees(address _token, uint24 _swapFee, uint256 _swapMinAmount) external onlyRole(FEES_TRANSFER_ROLE) {
+    /// @param _swapMinAmount minAmount need to get if swap happens
+    function distibuteFees(
+        address _token,
+        uint24 _swapFee,
+        uint256 _swapMinAmount
+    ) external onlyRole(FEES_TRANSFER_ROLE) {
         uint256 totalBalance = IERC20Decimals(_token).balanceOf(address(this));
         uint256 decimals = IERC20Decimals(_token).decimals();
         require(totalBalance > 0, "!totalBalance");
-        IERC20Decimals(_token).approve(address(usdl), totalBalance/2);
+        IERC20Decimals(_token).approve(address(usdl), totalBalance / 2);
         uint256 dexIndex = _convertCollateralToValidDexIndex(_token, true);
         uint256 collateralAmount = ((totalBalance / 2) * 1e18) / (10**decimals);
         usdl.depositToWExactCollateral(
@@ -99,7 +103,7 @@ contract FeesAccumulator is AccessControl {
             IERC20(_token)
         );
 
-        uint256 synthAmount = totalBalance/2;
+        uint256 synthAmount = totalBalance / 2;
         collateralAmount = synthAmount;
         if (_token != usdl.perpSettlementToken()) {
             address[] memory _path = new address[](2);
@@ -109,12 +113,21 @@ contract FeesAccumulator is AccessControl {
             decimals = IERC20Decimals(usdl.perpSettlementToken()).decimals();
             IERC20Decimals(_token).approve(router, synthAmount);
 
-            collateralAmount = _swapOnUniV3(router, _path, synthAmount, _swapFee, _swapMinAmount);
+            collateralAmount = _swapOnUniV3(
+                router,
+                _path,
+                synthAmount,
+                _swapFee,
+                _swapMinAmount
+            );
         }
         collateralAmount = (collateralAmount * 1e18) / (10**decimals);
 
         SynthAddresses memory _sa = synthMapping[_token];
-        IERC20Decimals(IERC20Decimals(usdl.perpSettlementToken())).approve(_sa.synthAddress, collateralAmount);
+        IERC20Decimals(IERC20Decimals(usdl.perpSettlementToken())).approve(
+            _sa.synthAddress,
+            collateralAmount
+        );
         ILemmaSynth(_sa.synthAddress).depositToWExactCollateral(
             address(_sa.xSynthAddress),
             collateralAmount,
@@ -125,8 +138,8 @@ contract FeesAccumulator is AccessControl {
     }
 
     /// @notice Collateral --> dexIndex
-    /// @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship 
-    /// @dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this 
+    /// @dev Currently it is assumed that there is 1:1 collateral <--> dexIndex relationship
+    /// @dev Since 0 is an invalid value, in the internal structure we need to record the values adding 1 to allow this
     function _convertCollateralToValidDexIndex(address collateral, bool isUsdl)
         internal
         view
@@ -153,22 +166,25 @@ contract FeesAccumulator is AccessControl {
         address _router,
         address[] memory path,
         uint256 amount,
-        uint24 _swapFee, 
+        uint24 _swapFee,
         uint256 _swapMinAmount
     ) internal returns (uint256) {
         uint256 res;
         IERC20Decimals(path[0]).approve(_router, type(uint256).max);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter.ExactInputSingleParams({
-            tokenIn: path[0],
-            tokenOut: path[1],
-            fee: _swapFee,
-            recipient: address(this),
-            deadline: type(uint256).max,
-            amountIn: amount,
-            amountOutMinimum: _swapMinAmount,
-            sqrtPriceLimitX96: 0
-        });
-        uint256 balanceBefore = IERC20Decimals(path[1]).balanceOf(address(this));
+        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
+            .ExactInputSingleParams({
+                tokenIn: path[0],
+                tokenOut: path[1],
+                fee: _swapFee,
+                recipient: address(this),
+                deadline: type(uint256).max,
+                amountIn: amount,
+                amountOutMinimum: _swapMinAmount,
+                sqrtPriceLimitX96: 0
+            });
+        uint256 balanceBefore = IERC20Decimals(path[1]).balanceOf(
+            address(this)
+        );
         res = ISwapRouter(_router).exactInputSingle(params);
         uint256 balanceAfter = IERC20Decimals(path[1]).balanceOf(address(this));
         res = uint256(int256(balanceAfter) - int256(balanceBefore));

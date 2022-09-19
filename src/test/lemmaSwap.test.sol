@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.14;
 
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
@@ -10,9 +10,12 @@ import {IPerpVault} from "../interfaces/IPerpVault.sol";
 import "forge-std/Test.sol";
 
 interface IPerpLemma {
-    function isUsdlCollateralTailAsset() external view returns(bool);
+    function isUsdlCollateralTailAsset() external view returns (bool);
+
     function setIsUsdlCollateralTailAsset(bool _x) external;
+
     function getAccountValue() external view returns (int256 value_1e18);
+
     function getIndexPrice() external view returns (uint256 price);
 }
 
@@ -84,23 +87,39 @@ contract ContractTest is Test {
 
     // for e.g if we want to swap weth -> wbtc
     // then tokenIn => weth AND tokenOut => wbtc
-    function getMaxAmountInUsedForFuzzing(uint256 tokenInIndex, uint256 tokenOutIndex, address tokenIn, address tokenOut) internal view returns(uint256){
-        address perpLemmaIn = d.usdl().perpetualDEXWrappers(tokenInIndex, tokenIn);
-        address perpLemmaOut = d.usdl().perpetualDEXWrappers(tokenOutIndex, tokenOut);
+    function getMaxAmountInUsedForFuzzing(
+        uint256 tokenInIndex,
+        uint256 tokenOutIndex,
+        address tokenIn,
+        address tokenOut
+    ) internal view returns (uint256) {
+        address perpLemmaIn = d.usdl().perpetualDEXWrappers(
+            tokenInIndex,
+            tokenIn
+        );
+        address perpLemmaOut = d.usdl().perpetualDEXWrappers(
+            tokenOutIndex,
+            tokenOut
+        );
         uint256 tokenOutDeposited;
         if (IPerpLemma(perpLemmaOut).isUsdlCollateralTailAsset()) {
             tokenOutDeposited = d.wbtc().balanceOf(perpLemmaOut);
         } else {
-            int256 tempTokenOutDeposited = IPerpVault(d.perpVault()).getBalanceByToken(perpLemmaOut, tokenOut);
-            tempTokenOutDeposited = tempTokenOutDeposited < 0 ? tempTokenOutDeposited*(-1) : tempTokenOutDeposited;
+            int256 tempTokenOutDeposited = IPerpVault(d.perpVault())
+                .getBalanceByToken(perpLemmaOut, tokenOut);
+            tempTokenOutDeposited = tempTokenOutDeposited < 0
+                ? tempTokenOutDeposited * (-1)
+                : tempTokenOutDeposited;
             tokenOutDeposited = uint256(tempTokenOutDeposited);
         }
-        uint256 indexPriceOfTokenIn = IPerpLemma(perpLemmaIn).getIndexPrice(); 
-        uint256 indexPriceOfTokenOut = IPerpLemma(perpLemmaOut).getIndexPrice(); 
+        uint256 indexPriceOfTokenIn = IPerpLemma(perpLemmaIn).getIndexPrice();
+        uint256 indexPriceOfTokenOut = IPerpLemma(perpLemmaOut).getIndexPrice();
         uint256 tokenOutDecimal = IERC20Decimals(address(d.wbtc())).decimals();
-        tokenOutDeposited = tokenOutDeposited * 1e18 / (10**tokenOutDecimal);
-        uint256 totalUsdcInTermOfTokenOut =  uint256(tokenOutDeposited) *  uint256(indexPriceOfTokenOut) / 1e18;
-        uint256 maxTokenInUsed = totalUsdcInTermOfTokenOut * 1e18 / indexPriceOfTokenIn;
+        tokenOutDeposited = (tokenOutDeposited * 1e18) / (10**tokenOutDecimal);
+        uint256 totalUsdcInTermOfTokenOut = (uint256(tokenOutDeposited) *
+            uint256(indexPriceOfTokenOut)) / 1e18;
+        uint256 maxTokenInUsed = (totalUsdcInTermOfTokenOut * 1e18) /
+            indexPriceOfTokenIn;
         return maxTokenInUsed;
     }
 
@@ -136,7 +155,7 @@ contract ContractTest is Test {
             block.timestamp
         );
 
-        console.log('amountsOut:', amountsOut[1]);
+        console.log("amountsOut:", amountsOut[1]);
 
         assertTrue(
             d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn
@@ -249,7 +268,12 @@ contract ContractTest is Test {
     function testFuzzSwapExactTokensForTokens(uint256 amountIn) public {
         setUpForSwap();
 
-        uint256 maxTokenInUsed = getMaxAmountInUsedForFuzzing(0, 1 , address(d.weth()), address(d.wbtc()));
+        uint256 maxTokenInUsed = getMaxAmountInUsedForFuzzing(
+            0,
+            1,
+            address(d.weth()),
+            address(d.wbtc())
+        );
         vm.assume(amountIn > 1e6);
         vm.assume(amountIn < maxTokenInUsed);
 

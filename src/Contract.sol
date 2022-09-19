@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.14;
 
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -217,7 +217,10 @@ contract Deployment is Test {
 
     constructor() {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.test.json");
+        string memory path = string.concat(
+            root,
+            "/src/test/fixtures/lemmaAddresses.test.json"
+        );
         string memory json = vm.readFile(path);
         bytes memory _lemmaAddresses = json.parseRaw(".Addresses[0]");
         bytes memory _perpAddresses = json.parseRaw(".Addresses[1]");
@@ -228,7 +231,7 @@ contract Deployment is Test {
         perpVault = perpAddresses.a_perpVault;
         accountBalance = perpAddresses.b_accountBalance;
 
-        routerUniV3 = ISwapRouter(lemmaAddresses.c_optimismKovanUniV3Router);// UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
+        routerUniV3 = ISwapRouter(lemmaAddresses.c_optimismKovanUniV3Router); // UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
         admin = perpAddresses.c_admin;
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L45
@@ -242,18 +245,14 @@ contract Deployment is Test {
         );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L41
-        testnet_optimism_kovan.USDC = address(
-            lemmaAddresses.e_usdc
-        );
+        testnet_optimism_kovan.USDC = address(lemmaAddresses.e_usdc);
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L307
         // testnet_optimism_kovan.USDLemma = address(0xc34E7f18185b381d1d7aab8aeEC507e01f4276EE);
         testnet_optimism_kovan.USDLemma = address(
             lemmaAddresses.h_usdLemmaAddress
         );
-        testnet_optimism_kovan.xusdl = address(
-            lemmaAddresses.k_xUSDLAddress
-        );
+        testnet_optimism_kovan.xusdl = address(lemmaAddresses.k_xUSDLAddress);
 
         // testnet_optimism_kovan.LemmaSynthEth = 0xac7b51F1D5Da49c64fAe5ef7D5Dc2869389A46FC;
         // testnet_optimism_kovan.LemmaSynthBtc = 0x72D43D1A52599289eDBE0c98342c6ED22eB85bd3;

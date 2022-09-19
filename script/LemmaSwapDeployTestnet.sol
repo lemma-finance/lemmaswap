@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// pragma solidity >=0.6.0 <0.9.0;
-pragma solidity >=0.7.6;
-pragma abicoder v2;
+pragma solidity 0.8.14;
 
 import {LemmaSwap} from "../src/LemmaSwap/LemmaSwap.sol";
 import {FeesAccumulator} from "../src/LemmaSwap/FeesAccumulator.sol";
@@ -34,41 +32,59 @@ contract LemmaSwapDeployTestnet is Script {
 
     function run() external {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.script.json");
+        string memory path = string.concat(
+            root,
+            "/src/test/fixtures/lemmaAddresses.script.json"
+        );
         string memory json = vm.readFile(path);
         bytes memory addresses = json.parseRaw(".Addresses[0]");
 
-        LemmaPerpAddresses memory lemmaPerpAddresses = abi.decode(addresses, (LemmaPerpAddresses));
+        LemmaPerpAddresses memory lemmaPerpAddresses = abi.decode(
+            addresses,
+            (LemmaPerpAddresses)
+        );
 
         vm.startBroadcast(tx.origin);
         usdLemma = IUSDLemma(lemmaPerpAddresses.h_usdLemmaAddress);
         lemmaSwap = new LemmaSwap(
-            lemmaPerpAddresses.h_usdLemmaAddress, 
-            lemmaPerpAddresses.g_usdlCollateralWeth, 
+            lemmaPerpAddresses.h_usdLemmaAddress,
+            lemmaPerpAddresses.g_usdlCollateralWeth,
             msg.sender
         );
-        console.log('lemmaSwap: ', address(lemmaSwap));
+        console.log("lemmaSwap: ", address(lemmaSwap));
 
-        lemmaSwap.setCollateralToDexIndex(lemmaPerpAddresses.g_usdlCollateralWeth, 0);
-        lemmaSwap.setCollateralToDexIndex(lemmaPerpAddresses.f_usdlCollateralWbtc, 1);
-        
+        lemmaSwap.setCollateralToDexIndex(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            0
+        );
+        lemmaSwap.setCollateralToDexIndex(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            1
+        );
+
         usdLemma.grantRole(LEMMA_SWAP, address(lemmaSwap));
-        
+
         feesAccumulator = new FeesAccumulator(
             lemmaPerpAddresses.c_optimismKovanUniV3Router,
             IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
         );
 
-        feesAccumulator.setCollateralToDexIndexForUsdl(lemmaPerpAddresses.g_usdlCollateralWeth, 0);
-        feesAccumulator.setCollateralToDexIndexForUsdl(lemmaPerpAddresses.f_usdlCollateralWbtc, 1);
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            0
+        );
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            1
+        );
         feesAccumulator.setCollateralToSynth(
-            lemmaPerpAddresses.g_usdlCollateralWeth, 
-            lemmaPerpAddresses.b_LemmaSynthEth, 
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            lemmaPerpAddresses.b_LemmaSynthEth,
             lemmaPerpAddresses.j_xLemmaSynthEth
         );
         feesAccumulator.setCollateralToSynth(
-            lemmaPerpAddresses.f_usdlCollateralWbtc, 
-            lemmaPerpAddresses.a_LemmaSynthBtc, 
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            lemmaPerpAddresses.a_LemmaSynthBtc,
             lemmaPerpAddresses.i_xLemmaSynthBtc
         );
         vm.stopBroadcast();
