@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity 0.8.14;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
@@ -28,6 +28,7 @@ contract LemmaSwap is AccessControl {
     ) {
         _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
+        grantRole(OWNER_ROLE, msg.sender);
         usdl = IUSDLemma(_usdl);
         weth = IWETH9(_weth);
         feesAccumulator = _feesAccumulator;
@@ -50,7 +51,7 @@ contract LemmaSwap is AccessControl {
         _;
     }
 
-    modifier ensure(uint deadline) {
+    modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "!trade expired");
         _;
     }
@@ -173,7 +174,7 @@ contract LemmaSwap is AccessControl {
         uint256 deadline
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
             path[0],
@@ -203,7 +204,7 @@ contract LemmaSwap is AccessControl {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = msg.value;
         amounts[1] = _swapWithExactInput(
             address(weth),
@@ -233,7 +234,7 @@ contract LemmaSwap is AccessControl {
     ) external ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[1] == address(weth), "! Invalid path");
-        amounts = new uint[](path.length);
+        amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
             path[0],
@@ -287,19 +288,24 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
-
-        if (from != address(this)) {
-            TransferHelper.safeTransferFrom(
-                tokenIn,
-                from,
-                address(this),
-                amountIn
-            );
+        {   
+            uint256 tokenInDecimal = IERC20Decimals(tokenIn).decimals();
+            uint256 amountTokenInDecimal = (amountIn* (10 ** tokenInDecimal)) / 1e18;
+            if (from != address(this)) {
+                TransferHelper.safeTransferFrom(
+                    tokenIn,
+                    from,
+                    address(this),
+                    amountTokenInDecimal
+                );
+            }
+        
+            uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
+            uint256 protocolFeesTokenInDecimal = (getProtocolFeesTokenIn(tokenIn, amountIn) * (10 ** tokenInDecimal)) / 1e18;
+            TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesTokenInDecimal);
+            protocolFeesIn = protocolFeesTokenInDecimal * 1e18 / (10 ** tokenInDecimal);
+            amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
         }
-
-        uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-        TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesIn);
-        amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
 
         if (
             IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
@@ -307,6 +313,7 @@ contract LemmaSwap is AccessControl {
         ) {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
+
         usdl.depositToWExactCollateral(
             address(this),
             amountIn,
@@ -342,6 +349,7 @@ contract LemmaSwap is AccessControl {
         );
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
+        _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
     }
 }

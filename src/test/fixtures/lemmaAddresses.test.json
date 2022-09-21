@@ -1,0 +1,45 @@
+{
+    "Addresses": [
+        [
+            {
+                "a_LemmaSynthBtc" : "0xD885FD5ACAD3eA15b6FCC7CEc4B638a8E030B24d",
+                "b_LemmaSynthEth" : "0xE12d67F8529789988b153027366862AFa060D55c",
+                "c_optimismKovanUniV3Router" : "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+                "d_settlementTokenManagerAddress" : "0xCE7808D62FCC4B9cc4A2e661273d61C1a66fcFa0",
+                "e_usdc" : "0x3e22e37Cb472c872B5dE121134cFD1B57Ef06560",
+                "f_usdlCollateralWbtc" : "0xf69460072321ed663Ad8E69Bc15771A57D18522d",
+                "g_usdlCollateralWeth" : "0x4200000000000000000000000000000000000006",
+                "h_usdLemmaAddress" : "0x3e193e134eF0f9187b07cbD6d0DBaD56E1B5542B",
+                "i_xLemmaSynthBtc" : "0x6b29B40D8583e5df5EE657345AAf62f18dEc2A1D",
+                "j_xLemmaSynthEth" : "0xE920E05551b3718ae5B1f26d7462974FefdF77F3",
+                "k_xUSDLAddress" : "0xB99f3c4fFc33E61aD1F060f9aF393b2f578dA6A4"
+            },
+            {
+                "a_perpVault": "0xB0ff090d04c268ABb26450ba749f0497EFA9Bb7C",
+                "b_accountBalance": "0x594ADf28b465612DB033C1aEF4bd19972343934D",
+                "c_admin": "0x70Be17A1D2C66071c5ff4D31CF5e513E985aBcEE"
+            }
+        ],
+        [
+            {
+                "a_LemmaSynthBtc" : "0x8A641696Caf0f59bB7a53CF8D2dc943ED95229A6",
+                "b_LemmaSynthEth" : "0x3BC414FA971189783ACee4dEe281067C322E3412",
+                "c_optimismKovanUniV3Router" : "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+                "d_settlementTokenManagerAddress" : "0x2F23EAc2714D323BC76d2F014232FCd6f54c0338",
+                "e_usdc" : "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+                "f_usdlCollateralWbtc" : "0x68f180fcCe6836688e9084f035309E29Bf0A2095",
+                "g_usdlCollateralWeth" : "0x4200000000000000000000000000000000000006",
+                "h_usdLemmaAddress" : "0x96F2539d3684dbde8B3242A51A73B66360a5B541",
+                "i_xLemmaSynthBtc" : "0x7D39583e262CBe75a1D698A6D79cd5a2958cb61d",
+                "j_xLemmaSynthEth" : "0x89c4e9a23Db43641e1B3C5E0691b100E64b50E32",
+                "k_xUSDLAddress" : "0x252Ea7E68a27390Ce0D53851192839A39Ab8B38C"
+            },
+            {
+                "a_perpVault": "0xAD7b4C162707E0B2b5f6fdDbD3f8538A5fbA0d60",
+                "b_accountBalance": "0xA7f3FC32043757039d5e13d790EE43edBcBa8b7c",
+                "c_admin": "0x0f3BF5c241B6625C0fA781ED137fDe6786b2e66f"
+            }
+        ]
+    ]
+}
+

@@ -1,0 +1,18 @@
+{
+    "Addresses": [
+        {
+            "a_LemmaSynthBtc" : "0xD885FD5ACAD3eA15b6FCC7CEc4B638a8E030B24d",
+            "b_LemmaSynthEth" : "0xE12d67F8529789988b153027366862AFa060D55c",
+            "c_optimismKovanUniV3Router" : "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+            "d_settlementTokenManagerAddress" : "0xCE7808D62FCC4B9cc4A2e661273d61C1a66fcFa0",
+            "e_usdc" : "0x3e22e37Cb472c872B5dE121134cFD1B57Ef06560",
+            "f_usdlCollateralWbtc" : "0xf69460072321ed663Ad8E69Bc15771A57D18522d",
+            "g_usdlCollateralWeth" : "0x4200000000000000000000000000000000000006",
+            "h_usdLemmaAddress" : "0x3e193e134eF0f9187b07cbD6d0DBaD56E1B5542B",
+            "i_xLemmaSynthBtc" : "0x6b29B40D8583e5df5EE657345AAf62f18dEc2A1D",
+            "j_xLemmaSynthEth" : "0xE920E05551b3718ae5B1f26d7462974FefdF77F3",
+            "k_xUSDLAddress" : "0xB99f3c4fFc33E61aD1F060f9aF393b2f578dA6A4"
+        }
+    ]
+}
+

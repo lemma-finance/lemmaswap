@@ -3,3 +3,5 @@ out/
 test_on_kovan_alchemy.sh
 
 .env
+
+node_modules

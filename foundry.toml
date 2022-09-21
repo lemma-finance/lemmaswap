@@ -1,7 +1,9 @@
 [profile.default]
 src = 'src'
+solc = '0.8.14'
 out = 'out'
 libs = ['lib']
+fs_permissions = [{ access = "read", path = "./"}]
 remappings = [
     '@uniswap/v3-periphery/=lib/v3-periphery/', 
     '@openzeppelin/=lib/openzeppelin-contracts/', 

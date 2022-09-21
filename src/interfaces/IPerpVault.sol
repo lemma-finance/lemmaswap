@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.14;
 
 interface IPerpVault {
     function deposit(address token, uint256 amount) external;
@@ -7,12 +7,18 @@ interface IPerpVault {
     function withdraw(address token, uint256 amountX10_D) external;
 
     function getBalance(address trader) external view returns (int256);
-    
-    function getBalanceByToken(address trader, address token) external view returns (int256);
+
+    function getBalanceByToken(address trader, address token)
+        external
+        view
+        returns (int256);
 
     function decimals() external view returns (uint8);
 
-    function getSettlementToken() external view returns (address settlementToken);
+    function getSettlementToken()
+        external
+        view
+        returns (address settlementToken);
 
     function getFreeCollateral(address trader) external view returns (uint256);
 
@@ -21,5 +27,8 @@ interface IPerpVault {
         view
         returns (int256 freeCollateralByRatio);
 
-    function getFreeCollateralByToken(address trader, address token) external view returns (uint256);
+    function getFreeCollateralByToken(address trader, address token)
+        external
+        view
+        returns (uint256);
 }
