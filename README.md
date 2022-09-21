@@ -1,8 +1,7 @@
 
 # LemmaSwap
 
-LemmaSwap is to swap tokens for Erc20-Erc20, Eth-Erc20 and Erc20-Eth.
-We are using the basis-trading-stablecoin underlying protocol to swap tokens. 
+LemmaSwap is a new type of DEX that allows traders to swap spot assets using perpetual futures markets’ much deeper liquidity
 
 ## Instructions 
 
@@ -10,14 +9,6 @@ We are using the basis-trading-stablecoin underlying protocol to swap tokens.
 
 ```
 forge install
-```
- 
-or
-
-```
-forge install foundry-rs/forge-std
-forge install Uniswap/v3-periphery
-forge install Openzeppelin/openzeppelin-contracts
 ```
 
 2. Use 
