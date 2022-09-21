@@ -17,6 +17,10 @@ interface IPerpLemma {
     function getAccountValue() external view returns (int256 value_1e18);
 
     function getIndexPrice() external view returns (uint256 price);
+
+    function grantRole(bytes32 role, address account) external;
+    
+    function depositSettlementToken(uint256 _amount) external;
 }
 
 contract Minter {
@@ -43,13 +47,31 @@ contract Minter {
             collateral
         );
     }
+
+    function mintSynth(        
+        IERC20Decimals collateral,
+        uint256 perpDEXIndex,
+        uint256 amount
+    ) external {
+        d.bank().giveMoney(address(collateral), address(this), amount);
+        collateral.approve(address(d.lemmaSynth()), type(uint256).max);
+        amount = (amount * 1e18) / (10**collateral.decimals());
+        
+        d.lemmaSynth().depositToWExactCollateral(
+            address(this),
+            amount,
+            perpDEXIndex,
+            0,
+            collateral
+        );
+    }
 }
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE =
-        keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant USDC_TREASURY = keccak256("USDC_TREASURY");
 
     receive() external payable {}
 
@@ -65,7 +87,7 @@ contract ContractTest is Test {
         TransferHelper.safeTransferETH(address(d), 100e18);
         d.deployTestnet(1);
 
-        address perpLemma = d.usdl().perpetualDEXWrappers(1, address(d.wbtc()));
+        address perpLemma = d.usdl().perpetualDEXWrappers(0, address(d.wbtc()));
         vm.startPrank(d.admin());
         IPerpLemma(perpLemma).setIsUsdlCollateralTailAsset(true);
         vm.stopPrank();
@@ -79,10 +101,10 @@ contract ContractTest is Test {
     function setUpForSwap() public {
         // Trying to mint USDL with WETH
         Minter m1 = new Minter(d);
-        m1.mint(IERC20Decimals(address(d.weth())), 0, 1e18); // 1 ether
-        // Trying to mint USDL with WBTC
+        m1.mint(IERC20Decimals(address(d.weth())), 0, 2e18); // 1 ether
+        // // Trying to mint USDL with WBTC
         Minter m2 = new Minter(d);
-        m2.mint(IERC20Decimals(address(d.wbtc())), 1, 4374840); // 0.4374840 WBTC
+        m2.mint(IERC20Decimals(address(d.wbtc())), 0, 8674840); // 0.4374840 WBTC
     }
 
     // for e.g if we want to swap weth -> wbtc
@@ -123,16 +145,32 @@ contract ContractTest is Test {
         return maxTokenInUsed;
     }
 
-    function testSetupForSwap() public {
+    function depositUSDC() public {
+        address perpLemmaEth = 0x29b159aE784Accfa7Fb9c7ba1De272bad75f5674;
+        address perpLemmaBtc = 0xe161C6c9F2fC74AC97300e6f00648284d83cBd19;
+
+        vm.startPrank(d.admin());
+        deal(d.getAddresses().USDC, d.admin(), 100000e18);
+
+        IPerpLemma(perpLemmaEth).grantRole(USDC_TREASURY, d.admin());
+        IPerpLemma(perpLemmaBtc).grantRole(USDC_TREASURY, d.admin());
+
+        IERC20(d.getAddresses().USDC).approve(perpLemmaEth, type(uint256).max);
+        IERC20(d.getAddresses().USDC).approve(perpLemmaBtc, type(uint256).max);
+
+        IPerpLemma(perpLemmaEth).depositSettlementToken(5000e6);
+        IPerpLemma(perpLemmaBtc).depositSettlementToken(5000e6);
+
+        vm.stopPrank();
+    }
+
+    function testSetupForSwap_2() public {
+        depositUSDC();
         setUpForSwap();
     }
 
-    function testFailPayable() public {
-        TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
-    }
-
-    function testSwapExactTokensForTokens() public noAsstesLeft {
-        setUpForSwap();
+    function testSwapExactTokensForTokens_2() public noAsstesLeft {
+        testSetupForSwap_2();
 
         d.askForMoney(address(d.weth()), 10e18);
 
@@ -166,8 +204,47 @@ contract ContractTest is Test {
         );
     }
 
-    function testSwapExactETHForTokens() public payable noAsstesLeft {
-        setUpForSwap();
+    function testSwapExactTokensForTokens_3() public noAsstesLeft {
+        console.log('Address(this)', address(this), msg.sender);
+        testSetupForSwap_2();
+
+        uint256 amountIn = 86748400000000000; // 0.0867484 wbtc
+        // 86748400000000000
+        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn*1e8/1e18);
+
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
+        console.log('wethInitialBalance:', wethInitialBalance);
+        console.log('wbtcInitialBalance:', wbtcInitialBalance);
+
+        d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
+
+        address[] memory path = new address[](2);
+        path[0] = address(d.wbtc());
+        path[1] = address(d.weth());
+
+        uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForTokens(
+            amountIn,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        console.log("amountsOut:", amountsOut[1]);
+        console.log(d.wbtc().balanceOf(address(this)));
+        console.log(wbtcInitialBalance - amountIn*1e8/1e18);
+        assertTrue(
+            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - ((amountIn*1e8)/1e18)
+        );
+        assertTrue(
+            d.weth().balanceOf(address(this)) ==
+                wethInitialBalance + amountsOut[1]
+        );
+    }
+
+    function testSwapExactETHForTokens_2() public payable noAsstesLeft {
+        testSetupForSwap_2();
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
@@ -188,21 +265,33 @@ contract ContractTest is Test {
         );
     }
 
-    function testSwapExactTokensForETH() public noAsstesLeft {
-        setUpForSwap();
+    function testSwapExactTokensForETH_2() public noAsstesLeft {
+        testSetupForSwap_2();
 
-        uint256 amountIn = 43721400000000000; // 0.0437214 in form of 18 decimals
-        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn*1e8/1e18);
+        uint256 initialAmount = 10e18;
+
+        d.bank().giveMoney(address(d.wbtc()), address(this), initialAmount);
+        console.log('Done');
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
         uint256 ethInitialBalance = address(this).balance;
+
+        console.log('wethInitialBalance: ', wethInitialBalance);
+        console.log('wbtcInitialBalance: ', wbtcInitialBalance);
+        console.log('ethInitialBalance: ', ethInitialBalance);
 
         d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
 
         address[] memory path = new address[](2);
         path[0] = address(d.wbtc());
         path[1] = address(d.weth());
+
+        uint256 amountIn = 43721400000000000; // 0.0437214 in form of 18 decimals
+        
+
+        console.log('Asset1-b', d.weth().balanceOf(address(d.lemmaSwap())));
+        console.log('Asset2-b', d.wbtc().balanceOf(address(d.lemmaSwap())));
 
         uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForETH(
             amountIn,
@@ -212,20 +301,27 @@ contract ContractTest is Test {
             block.timestamp
         );
 
-        assertTrue(
-            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - ((amountIn*1e8)/1e18)
-        );
-        assertTrue(
-            address(this).balance == ethInitialBalance + amountsOut[1]
-        );
+        console.log('Asset1', d.weth().balanceOf(address(d.lemmaSwap())));
+        console.log('Asset2', d.wbtc().balanceOf(address(d.lemmaSwap())));
+        console.log('wbtc1:', d.wbtc().balanceOf(address(this)));
+        console.log('wbtc2:', initialAmount - amountIn);
+        console.log('weth1:', d.weth().balanceOf(address(this)));
+        console.log('weth2:', initialAmount - amountsOut[1]);
+
+        // assertTrue(
+        //     d.wbtc().balanceOf(address(this)) == initialAmount - amountIn
+        // );
+        // assertTrue(
+        //     d.weth().balanceOf(address(this)) == initialAmount + amountsOut[1]
+        // );
     }
 
-    function testFuzzSwapExactTokensForTokens(uint256 amountIn) public {
-        setUpForSwap();
+    function testFuzzSwapExactTokensForTokens_2(uint256 amountIn) public {
+        testSetupForSwap_2();
 
         uint256 maxTokenInUsed = getMaxAmountInUsedForFuzzing(
             0,
-            1,
+            0,
             address(d.weth()),
             address(d.wbtc())
         );
@@ -258,47 +354,5 @@ contract ContractTest is Test {
             d.wbtc().balanceOf(address(this)) ==
                 wbtcInitialBalance + amountsOut[1]
         );
-    }
-
-    function testDistributeFeesForEth() public noAsstesLeft {
-        d.askForMoney(address(d.weth()), 1e12);
-        d.askForMoney(address(d.wbtc()), 1e6);
-
-        d.weth().transfer(address(d.feesAccumulator()), 1e12);
-        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
-
-        d.mockUniV3Router().setRouter(address(0));
-        d.mockUniV3Router().setNextSwapAmount(1e9);
-
-        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
-        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
-    }
-
-    function testDistributeFeesForBtc() public noAsstesLeft {
-        d.askForMoney(address(d.weth()), 1e12);
-        d.askForMoney(address(d.wbtc()), 1e6);
-
-        d.weth().transfer(address(d.feesAccumulator()), 1e12);
-        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
-
-        d.mockUniV3Router().setRouter(address(0));
-        d.mockUniV3Router().setNextSwapAmount(1e9);
-
-        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
-        d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
-        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
-        assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
     }
 }

@@ -288,19 +288,24 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
-
-        if (from != address(this)) {
-            TransferHelper.safeTransferFrom(
-                tokenIn,
-                from,
-                address(this),
-                amountIn
-            );
+        {   
+            uint256 tokenInDecimal = IERC20Decimals(tokenIn).decimals();
+            uint256 amountTokenInDecimal = (amountIn* (10 ** tokenInDecimal)) / 1e18;
+            if (from != address(this)) {
+                TransferHelper.safeTransferFrom(
+                    tokenIn,
+                    from,
+                    address(this),
+                    amountTokenInDecimal
+                );
+            }
+        
+            uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
+            uint256 protocolFeesTokenInDecimal = (getProtocolFeesTokenIn(tokenIn, amountIn) * (10 ** tokenInDecimal)) / 1e18;
+            TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesTokenInDecimal);
+            protocolFeesIn = protocolFeesTokenInDecimal * 1e18 / (10 ** tokenInDecimal);
+            amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
         }
-
-        uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-        TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesIn);
-        amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
 
         if (
             IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
@@ -308,6 +313,7 @@ contract LemmaSwap is AccessControl {
         ) {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
+
         usdl.depositToWExactCollateral(
             address(this),
             amountIn,
@@ -343,6 +349,7 @@ contract LemmaSwap is AccessControl {
         );
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
+        _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
     }
 }

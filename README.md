@@ -40,6 +40,10 @@ Adjust verbosity with
 forge test --fork-url https://kovan.optimism.io --fork-block-number 6664172 --match-path src/test/lemmaSwap.test.sol
 ```
 
+```
+forge test --fork-url https://mainnet.optimism.io --fork-block-number 23917814 --match-path src/test/lemmaSwap.opmainnet.sol
+```
+
 3.3
 
 Test deployment scripts

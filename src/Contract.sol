@@ -6,6 +6,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IWETH9} from "../src/interfaces/IWETH9.sol";
 import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
+import {ILemmaSynth} from "./interfaces/ILemmaSynth.sol";
 import {IXUSDL} from "./interfaces/IXUSDL.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
 import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
@@ -156,9 +157,11 @@ contract Deployment is Test {
     using stdJson for string;
     IERC20 public wbtc;
     IUSDLemma public usdl;
+    ILemmaSynth public lemmaSynth;
     LemmaSwap public lemmaSwap;
     FeesAccumulator public feesAccumulator;
     IWETH9 public weth;
+    IERC20 public usdc;
     MockUniV3Router public mockUniV3Router;
     address public admin;
 
@@ -214,23 +217,34 @@ contract Deployment is Test {
 
     address public perpVault;
     address public accountBalance;
-
+    uint256 public chainId;
     constructor() {
+        chainId = block.chainid;
+
         string memory root = vm.projectRoot();
         string memory path = string.concat(
             root,
             "/src/test/fixtures/lemmaAddresses.test.json"
         );
         string memory json = vm.readFile(path);
-        bytes memory _lemmaAddresses = json.parseRaw(".Addresses[0]");
-        bytes memory _perpAddresses = json.parseRaw(".Addresses[1]");
+
+        bytes memory _lemmaAddresses;
+        bytes memory _perpAddresses;
+
+        if (chainId == 69) {
+            _lemmaAddresses = json.parseRaw(".Addresses[0][0]");
+            _perpAddresses = json.parseRaw(".Addresses[0][1]");
+        } else {
+            _lemmaAddresses = json.parseRaw(".Addresses[1][0]");
+            _perpAddresses = json.parseRaw(".Addresses[1][1]");
+        }
+
 
         lemmaAddresses = abi.decode(_lemmaAddresses, (LemmaAddresses));
         perpAddresses = abi.decode(_perpAddresses, (PerpAddresses));
 
         perpVault = perpAddresses.a_perpVault;
         accountBalance = perpAddresses.b_accountBalance;
-
         routerUniV3 = ISwapRouter(lemmaAddresses.c_optimismKovanUniV3Router); // UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
         admin = perpAddresses.c_admin;
@@ -271,17 +285,25 @@ contract Deployment is Test {
     function deployTestnet(uint256 mode) external {
         s_testnet memory testnet = testnet_optimism_kovan;
 
+        usdc = IERC20(testnet_optimism_kovan.USDC);
         weth = IWETH9(testnet.WETH);
         TransferHelper.safeTransferETH(address(weth), 100e18);
         wbtc = IWETH9(testnet.WBTC);
         deal(address(wbtc), address(this), 1e8);
 
         usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);
+        lemmaSynth = ILemmaSynth(testnet_optimism_kovan.LemmaSynthEth);
 
         lemmaSwap = new LemmaSwap(address(usdl), address(weth), admin);
         lemmaSwap.grantRole(OWNER_ROLE, address(this));
-        lemmaSwap.setCollateralToDexIndex(address(weth), 0);
-        lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
+
+        if (chainId == 69) {
+            lemmaSwap.setCollateralToDexIndex(address(weth), 0);
+            lemmaSwap.setCollateralToDexIndex(address(wbtc), 1);
+        } else {
+            lemmaSwap.setCollateralToDexIndex(address(weth), 0);
+            lemmaSwap.setCollateralToDexIndex(address(wbtc), 0);
+        }
 
         vm.startPrank(admin);
         usdl.grantRole(LEMMA_SWAP, address(lemmaSwap));
