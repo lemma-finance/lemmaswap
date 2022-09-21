@@ -111,22 +111,20 @@ contract LemmaSwap is AccessControl {
     /**
         @notice Computes the total amount of fees on input token
      */
-    function getProtocolFeesTokenIn(address token, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function getProtocolFeesTokenIn(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
         return (amount * getProtocolFeesCoeffTokenIn()) / 1e6;
     }
 
     /**
         @notice Computes the total amount of fees on output token
      */
-    function getProtocolFeesTokenOut(address token, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function getProtocolFeesTokenOut(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
         return (amount * getProtocolFeesCoeffTokenOut()) / 1e6;
     }
 
@@ -288,9 +286,10 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
-        {   
+        {
             uint256 tokenInDecimal = IERC20Decimals(tokenIn).decimals();
-            uint256 amountTokenInDecimal = (amountIn* (10 ** tokenInDecimal)) / 1e18;
+            uint256 amountTokenInDecimal = (amountIn * (10**tokenInDecimal)) /
+                1e18;
             if (from != address(this)) {
                 TransferHelper.safeTransferFrom(
                     tokenIn,
@@ -299,12 +298,23 @@ contract LemmaSwap is AccessControl {
                     amountTokenInDecimal
                 );
             }
-        
+
             uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-            uint256 protocolFeesTokenInDecimal = (getProtocolFeesTokenIn(tokenIn, amountIn) * (10 ** tokenInDecimal)) / 1e18;
-            TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesTokenInDecimal);
-            protocolFeesIn = protocolFeesTokenInDecimal * 1e18 / (10 ** tokenInDecimal);
-            amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
+            uint256 protocolFeesTokenInDecimal = (getProtocolFeesTokenIn(
+                tokenIn,
+                amountIn
+            ) * (10**tokenInDecimal)) / 1e18;
+            TransferHelper.safeTransfer(
+                tokenIn,
+                feesAccumulator,
+                protocolFeesTokenInDecimal
+            );
+            protocolFeesIn =
+                (protocolFeesTokenInDecimal * 1e18) /
+                (10**tokenInDecimal);
+            amountIn = protocolFeesIn > 0
+                ? amountIn - protocolFeesIn
+                : amountIn;
         }
 
         if (
@@ -330,7 +340,6 @@ contract LemmaSwap is AccessControl {
             amountOutMin,
             IERC20(tokenOut)
         );
-        uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
         uint256 protocolFeesOut = getProtocolFeesTokenOut(
             tokenOut,
             IERC20Decimals(tokenOut).balanceOf(address(this))
@@ -351,5 +360,12 @@ contract LemmaSwap is AccessControl {
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
         _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
+    }
+
+    function rescueFunds(address token, uint256 amount)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        TransferHelper.safeTransfer(token, msg.sender, amount);
     }
 }

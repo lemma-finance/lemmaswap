@@ -8,17 +8,11 @@ interface IPerpVault {
 
     function getBalance(address trader) external view returns (int256);
 
-    function getBalanceByToken(address trader, address token)
-        external
-        view
-        returns (int256);
+    function getBalanceByToken(address trader, address token) external view returns (int256);
 
     function decimals() external view returns (uint8);
 
-    function getSettlementToken()
-        external
-        view
-        returns (address settlementToken);
+    function getSettlementToken() external view returns (address settlementToken);
 
     function getFreeCollateral(address trader) external view returns (uint256);
 
@@ -27,8 +21,5 @@ interface IPerpVault {
         view
         returns (int256 freeCollateralByRatio);
 
-    function getFreeCollateralByToken(address trader, address token)
-        external
-        view
-        returns (uint256);
+    function getFreeCollateralByToken(address trader, address token) external view returns (uint256);
 }
