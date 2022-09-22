@@ -111,22 +111,20 @@ contract LemmaSwap is AccessControl {
     /**
         @notice Computes the total amount of fees on input token
      */
-    function getProtocolFeesTokenIn(address token, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function getProtocolFeesTokenIn(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
         return (amount * getProtocolFeesCoeffTokenIn()) / 1e6;
     }
 
     /**
         @notice Computes the total amount of fees on output token
      */
-    function getProtocolFeesTokenOut(address token, uint256 amount)
-        public
-        view
-        returns (uint256)
-    {
+    function getProtocolFeesTokenOut(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
         return (amount * getProtocolFeesCoeffTokenOut()) / 1e6;
     }
 
@@ -343,7 +341,6 @@ contract LemmaSwap is AccessControl {
             amountOutMin,
             IERC20(tokenOut)
         );
-        uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
         uint256 protocolFeesOut = getProtocolFeesTokenOut(
             tokenOut,
             IERC20Decimals(tokenOut).balanceOf(address(this))
@@ -374,5 +371,12 @@ contract LemmaSwap is AccessControl {
     function convertInToken_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
         uint256 tokenDecimal = token.decimals();
         return ((amount * (10 ** tokenDecimal)) / 1e18); 
+    }
+    
+    function rescueFunds(address token, uint256 amount)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        TransferHelper.safeTransfer(token, msg.sender, amount);
     }
 }

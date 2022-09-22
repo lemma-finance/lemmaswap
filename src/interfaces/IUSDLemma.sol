@@ -10,7 +10,8 @@ interface IUSDLemma is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 maxCollateralRequired,
         IERC20 collateral
-    ) external;
+    )
+        external;
 
     function withdrawTo(
         address to,
@@ -18,7 +19,8 @@ interface IUSDLemma is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 minCollateralToGetBack,
         IERC20 collateral
-    ) external;
+    )
+        external;
 
     function depositToWExactCollateral(
         address to,
@@ -26,7 +28,8 @@ interface IUSDLemma is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 minUSDLToMint,
         IERC20 collateral
-    ) external;
+    )
+        external;
 
     function withdrawToWExactCollateral(
         address to,
@@ -34,26 +37,21 @@ interface IUSDLemma is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 maxUSDLToBurn,
         IERC20 collateral
-    ) external;
+    )
+        external;
 
-    function perpetualDEXWrappers(uint256 perpetualDEXIndex, address collateral)
-        external
-        view
-        returns (address);
+    function perpetualDEXWrappers(uint256 perpetualDEXIndex, address collateral) external view returns (address);
 
     function addPerpetualDEXWrapper(
         uint256 perpetualDEXIndex,
         address collateralAddress,
         address perpetualDEXWrapperAddress
-    ) external;
+    )
+        external;
 
     function perpSettlementToken() external view returns (address);
 
-    function getFeesPerc(
-        uint256 dexIndex,
-        address collateral,
-        bool isMinting
-    ) external view returns (uint256);
+    function getFeesPerc(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
 
     function setWhiteListAddress(address _account, bool _isWhiteList) external;
 
@@ -63,49 +61,25 @@ interface IUSDLemma is IERC20 {
 
     function name() external view returns (string memory);
 
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external;
 
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 
-    function closePosition(
-        uint256 collateralAmount,
-        uint256 perpetualDEXIndex,
-        IERC20 collateral
-    ) external returns (uint256, uint256);
+    function closePosition(uint256 collateralAmount, uint256 perpetualDEXIndex, IERC20 collateral)
+        external
+        returns (uint256, uint256);
 
-    function burnAndTransfer(
-        uint256 USDLToBurn,
-        uint256 collateralAmountToGetBack,
-        address to,
-        IERC20 collateral
-    ) external;
+    function burnAndTransfer(uint256 USDLToBurn, uint256 collateralAmountToGetBack, address to, IERC20 collateral)
+        external;
 
     function grantRole(bytes32 role, address account) external;
 
-    function getFees(
-        uint256 dexIndex,
-        address collateral,
-        bool isMinting
-    ) external view returns (uint256);
+    function getFees(uint256 dexIndex, address collateral, bool isMinting) external view returns (uint256);
 
-    function getTotalPosition(uint256 dexIndex, address collateral)
-        external
-        view
-        returns (int256);
+    function getTotalPosition(uint256 dexIndex, address collateral) external view returns (int256);
 
     function lemmaTreasury() external view returns (address);
 
-    event PerpetualDexWrapperAdded(
-        uint256 indexed dexIndex,
-        address indexed collateral,
-        address dexWrapper
-    );
+    event PerpetualDexWrapperAdded(uint256 indexed dexIndex, address indexed collateral, address dexWrapper);
 }
