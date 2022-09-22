@@ -218,6 +218,7 @@ contract Deployment is Test {
     address public perpVault;
     address public accountBalance;
     uint256 public chainId;
+
     constructor() {
         chainId = block.chainid;
 
@@ -238,7 +239,6 @@ contract Deployment is Test {
             _lemmaAddresses = json.parseRaw(".Addresses[1][0]");
             _perpAddresses = json.parseRaw(".Addresses[1][1]");
         }
-
 
         lemmaAddresses = abi.decode(_lemmaAddresses, (LemmaAddresses));
         perpAddresses = abi.decode(_perpAddresses, (PerpAddresses));

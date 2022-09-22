@@ -47,7 +47,8 @@ contract Minter {
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE =
+        keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     receive() external payable {}
@@ -214,9 +215,7 @@ contract ContractTest is Test {
         assertTrue(
             d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - amountIn
         );
-        assertTrue(
-            address(this).balance == ethInitialBalance + amountsOut[1]
-        );
+        assertTrue(address(this).balance == ethInitialBalance + amountsOut[1]);
     }
 
     function testFuzzSwapExactTokensForTokens(uint256 amountIn) public {

@@ -19,7 +19,7 @@ interface IPerpLemma {
     function getIndexPrice() external view returns (uint256 price);
 
     function grantRole(bytes32 role, address account) external;
-    
+
     function depositSettlementToken(uint256 _amount) external;
 }
 
@@ -48,7 +48,7 @@ contract Minter {
         );
     }
 
-    function mintSynth(        
+    function mintSynth(
         IERC20Decimals collateral,
         uint256 perpDEXIndex,
         uint256 amount
@@ -56,7 +56,7 @@ contract Minter {
         d.bank().giveMoney(address(collateral), address(this), amount);
         collateral.approve(address(d.lemmaSynth()), type(uint256).max);
         amount = (amount * 1e18) / (10**collateral.decimals());
-        
+
         d.lemmaSynth().depositToWExactCollateral(
             address(this),
             amount,
@@ -69,7 +69,8 @@ contract Minter {
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE =
+        keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant USDC_TREASURY = keccak256("USDC_TREASURY");
 
@@ -288,9 +289,7 @@ contract ContractTest is Test {
         assertTrue(
             d.wbtc().balanceOf(address(this)) == initialAmount - amountIn
         );
-        assertTrue(
-            address(this).balance == ethInitialBalance + amountsOut[1]
-        );
+        assertTrue(address(this).balance == ethInitialBalance + amountsOut[1]);
     }
 
     function testFuzzSwapExactTokensForTokens_2(uint256 amountIn) public {

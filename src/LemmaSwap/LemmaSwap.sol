@@ -288,8 +288,7 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
-        uint256 amountIn1e_18 = convertIn18_decimals(IERC20Decimals(tokenIn), amountIn);
-        {   
+        {
             // static block: to handle stack to deep error
             if (from != address(this)) {
                 TransferHelper.safeTransferFrom(
@@ -299,27 +298,27 @@ contract LemmaSwap is AccessControl {
                     amountIn
                 );
             }
-        
-            uint256 protocolFeesInTokenInDecimal = convertInToken_decimals(
-                IERC20Decimals(tokenIn), 
-                getProtocolFeesTokenIn(tokenIn, amountIn1e_18)
+
+            uint256 protocolFeesInTokenInDecimal = getProtocolFeesTokenIn(
+                tokenIn,
+                amountIn
             );
             TransferHelper.safeTransfer(
-                tokenIn, 
-                feesAccumulator, 
+                tokenIn,
+                feesAccumulator,
                 protocolFeesInTokenInDecimal
             );
-            uint256 protocolFees1e_18 = convertIn18_decimals(
-                IERC20Decimals(tokenIn), 
-                protocolFeesInTokenInDecimal
-            );
-            amountIn1e_18 = protocolFees1e_18 > 0 ? 
-                amountIn1e_18 - protocolFees1e_18 : 
-                amountIn1e_18;
-            
+            amountIn = protocolFeesInTokenInDecimal > 0
+                ? amountIn - protocolFeesInTokenInDecimal
+                : amountIn;
+
             // static block end
         }
 
+        uint256 amountIn1e_18 = convertIn18_decimals(
+            IERC20Decimals(tokenIn),
+            amountIn
+        );
         if (
             IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
             amountIn
@@ -366,13 +365,21 @@ contract LemmaSwap is AccessControl {
         return netCollateralToGetBack;
     }
 
-    function convertIn18_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
+    function convertIn18_decimals(IERC20Decimals token, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 tokenDecimal = token.decimals();
-        return ((amount * 1e18) / (10 ** tokenDecimal)); 
+        return ((amount * 1e18) / (10**tokenDecimal));
     }
 
-    function convertInToken_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
+    function convertInToken_decimals(IERC20Decimals token, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 tokenDecimal = token.decimals();
-        return ((amount * (10 ** tokenDecimal)) / 1e18); 
+        return ((amount * (10**tokenDecimal)) / 1e18);
     }
 }
