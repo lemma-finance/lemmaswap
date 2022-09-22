@@ -47,8 +47,7 @@ contract Minter {
 
 contract ContractTest is Test {
     Deployment public d;
-    bytes32 public constant FEES_TRANSFER_ROLE =
-        keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     receive() external payable {}
@@ -191,8 +190,8 @@ contract ContractTest is Test {
     function testSwapExactTokensForETH() public noAsstesLeft {
         setUpForSwap();
 
-        uint256 amountIn = 43721400000000000; // 0.0437214 in form of 18 decimals
-        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn*1e8/1e18);
+        uint256 amountIn = 4372140; // 0.0437214 in form of 18 decimals
+        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn);
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
@@ -213,7 +212,7 @@ contract ContractTest is Test {
         );
 
         assertTrue(
-            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - ((amountIn*1e8)/1e18)
+            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - amountIn
         );
         assertTrue(
             address(this).balance == ethInitialBalance + amountsOut[1]

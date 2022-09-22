@@ -288,23 +288,36 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
+        uint256 amountIn1e_18 = convertIn18_decimals(IERC20Decimals(tokenIn), amountIn);
         {   
-            uint256 tokenInDecimal = IERC20Decimals(tokenIn).decimals();
-            uint256 amountTokenInDecimal = (amountIn* (10 ** tokenInDecimal)) / 1e18;
+            // static block: to handle stack to deep error
             if (from != address(this)) {
                 TransferHelper.safeTransferFrom(
                     tokenIn,
                     from,
                     address(this),
-                    amountTokenInDecimal
+                    amountIn
                 );
             }
         
-            uint256 protocolFeesIn = getProtocolFeesTokenIn(tokenIn, amountIn);
-            uint256 protocolFeesTokenInDecimal = (getProtocolFeesTokenIn(tokenIn, amountIn) * (10 ** tokenInDecimal)) / 1e18;
-            TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesTokenInDecimal);
-            protocolFeesIn = protocolFeesTokenInDecimal * 1e18 / (10 ** tokenInDecimal);
-            amountIn = protocolFeesIn > 0 ? amountIn - protocolFeesIn : amountIn;
+            uint256 protocolFeesInTokenInDecimal = convertInToken_decimals(
+                IERC20Decimals(tokenIn), 
+                getProtocolFeesTokenIn(tokenIn, amountIn1e_18)
+            );
+            TransferHelper.safeTransfer(
+                tokenIn, 
+                feesAccumulator, 
+                protocolFeesInTokenInDecimal
+            );
+            uint256 protocolFees1e_18 = convertIn18_decimals(
+                IERC20Decimals(tokenIn), 
+                protocolFeesInTokenInDecimal
+            );
+            amountIn1e_18 = protocolFees1e_18 > 0 ? 
+                amountIn1e_18 - protocolFees1e_18 : 
+                amountIn1e_18;
+            
+            // static block end
         }
 
         if (
@@ -316,7 +329,7 @@ contract LemmaSwap is AccessControl {
 
         usdl.depositToWExactCollateral(
             address(this),
-            amountIn,
+            amountIn1e_18,
             _convertCollateralToValidDexIndex(tokenIn),
             0,
             IERC20(tokenIn)
@@ -351,5 +364,15 @@ contract LemmaSwap is AccessControl {
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
         _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
+    }
+
+    function convertIn18_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
+        uint256 tokenDecimal = token.decimals();
+        return ((amount * 1e18) / (10 ** tokenDecimal)); 
+    }
+
+    function convertInToken_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
+        uint256 tokenDecimal = token.decimals();
+        return ((amount * (10 ** tokenDecimal)) / 1e18); 
     }
 }

@@ -205,17 +205,13 @@ contract ContractTest is Test {
     }
 
     function testSwapExactTokensForTokens_3() public noAsstesLeft {
-        console.log('Address(this)', address(this), msg.sender);
         testSetupForSwap_2();
 
-        uint256 amountIn = 86748400000000000; // 0.0867484 wbtc
-        // 86748400000000000
-        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn*1e8/1e18);
+        uint256 amountIn = 8674840; // 0.0867484 wbtc
+        d.bank().giveMoney(address(d.wbtc()), address(this), amountIn);
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
-        console.log('wethInitialBalance:', wethInitialBalance);
-        console.log('wbtcInitialBalance:', wbtcInitialBalance);
 
         d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
 
@@ -231,11 +227,8 @@ contract ContractTest is Test {
             block.timestamp
         );
 
-        console.log("amountsOut:", amountsOut[1]);
-        console.log(d.wbtc().balanceOf(address(this)));
-        console.log(wbtcInitialBalance - amountIn*1e8/1e18);
         assertTrue(
-            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - ((amountIn*1e8)/1e18)
+            d.wbtc().balanceOf(address(this)) == wbtcInitialBalance - amountIn
         );
         assertTrue(
             d.weth().balanceOf(address(this)) ==
@@ -271,15 +264,10 @@ contract ContractTest is Test {
         uint256 initialAmount = 10e18;
 
         d.bank().giveMoney(address(d.wbtc()), address(this), initialAmount);
-        console.log('Done');
 
         uint256 wethInitialBalance = d.weth().balanceOf(address(this));
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
         uint256 ethInitialBalance = address(this).balance;
-
-        console.log('wethInitialBalance: ', wethInitialBalance);
-        console.log('wbtcInitialBalance: ', wbtcInitialBalance);
-        console.log('ethInitialBalance: ', ethInitialBalance);
 
         d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
 
@@ -287,11 +275,7 @@ contract ContractTest is Test {
         path[0] = address(d.wbtc());
         path[1] = address(d.weth());
 
-        uint256 amountIn = 43721400000000000; // 0.0437214 in form of 18 decimals
-        
-
-        console.log('Asset1-b', d.weth().balanceOf(address(d.lemmaSwap())));
-        console.log('Asset2-b', d.wbtc().balanceOf(address(d.lemmaSwap())));
+        uint256 amountIn = 4372140; // 0.0437214 in form of 18 decimals
 
         uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForETH(
             amountIn,
@@ -301,19 +285,12 @@ contract ContractTest is Test {
             block.timestamp
         );
 
-        console.log('Asset1', d.weth().balanceOf(address(d.lemmaSwap())));
-        console.log('Asset2', d.wbtc().balanceOf(address(d.lemmaSwap())));
-        console.log('wbtc1:', d.wbtc().balanceOf(address(this)));
-        console.log('wbtc2:', initialAmount - amountIn);
-        console.log('weth1:', d.weth().balanceOf(address(this)));
-        console.log('weth2:', initialAmount - amountsOut[1]);
-
-        // assertTrue(
-        //     d.wbtc().balanceOf(address(this)) == initialAmount - amountIn
-        // );
-        // assertTrue(
-        //     d.weth().balanceOf(address(this)) == initialAmount + amountsOut[1]
-        // );
+        assertTrue(
+            d.wbtc().balanceOf(address(this)) == initialAmount - amountIn
+        );
+        assertTrue(
+            address(this).balance == ethInitialBalance + amountsOut[1]
+        );
     }
 
     function testFuzzSwapExactTokensForTokens_2(uint256 amountIn) public {
