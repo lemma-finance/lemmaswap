@@ -10,8 +10,7 @@ interface ILemmaSynth is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 maxCollateralRequired,
         IERC20 collateral
-    )
-        external;
+    ) external;
 
     function withdrawTo(
         address to,
@@ -19,8 +18,7 @@ interface ILemmaSynth is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 minCollateralToGetBack,
         IERC20 collateral
-    )
-        external;
+    ) external;
 
     function depositToWExactCollateral(
         address to,
@@ -28,8 +26,7 @@ interface ILemmaSynth is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 minUSDLToMint,
         IERC20 collateral
-    )
-        external;
+    ) external;
 
     function withdrawToWExactCollateral(
         address to,
@@ -37,8 +34,7 @@ interface ILemmaSynth is IERC20 {
         uint256 perpetualDEXIndex,
         uint256 maxUSDLToBurn,
         IERC20 collateral
-    )
-        external;
+    ) external;
 
     function decimals() external view returns (uint256);
 
@@ -46,8 +42,15 @@ interface ILemmaSynth is IERC20 {
 
     function name() external view returns (string memory);
 
-    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external;
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
 
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 

@@ -34,11 +34,17 @@ contract LemmaSwapDeployTestnet is Script {
 
     function run() external {
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.script.json");
+        string memory path = string.concat(
+            root,
+            "/src/test/fixtures/lemmaAddresses.script.json"
+        );
         string memory json = vm.readFile(path);
         bytes memory addresses = json.parseRaw(".Addresses[0]");
 
-        LemmaPerpAddresses memory lemmaPerpAddresses = abi.decode(addresses, (LemmaPerpAddresses));
+        LemmaPerpAddresses memory lemmaPerpAddresses = abi.decode(
+            addresses,
+            (LemmaPerpAddresses)
+        );
 
         vm.startBroadcast(tx.origin);
         usdLemma = IUSDLemma(lemmaPerpAddresses.h_usdLemmaAddress);
@@ -49,8 +55,14 @@ contract LemmaSwapDeployTestnet is Script {
         );
         console.log("lemmaSwap: ", address(lemmaSwap));
 
-        lemmaSwap.setCollateralToDexIndex(lemmaPerpAddresses.g_usdlCollateralWeth, 0);
-        lemmaSwap.setCollateralToDexIndex(lemmaPerpAddresses.f_usdlCollateralWbtc, 1);
+        lemmaSwap.setCollateralToDexIndex(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            0
+        );
+        lemmaSwap.setCollateralToDexIndex(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            1
+        );
 
         usdLemma.grantRole(LEMMA_SWAP, address(lemmaSwap));
 
@@ -59,8 +71,14 @@ contract LemmaSwapDeployTestnet is Script {
             IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
         );
 
-        feesAccumulator.setCollateralToDexIndexForUsdl(lemmaPerpAddresses.g_usdlCollateralWeth, 0);
-        feesAccumulator.setCollateralToDexIndexForUsdl(lemmaPerpAddresses.f_usdlCollateralWbtc, 1);
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            0
+        );
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            1
+        );
         feesAccumulator.setCollateralToSynth(
             lemmaPerpAddresses.g_usdlCollateralWeth,
             lemmaPerpAddresses.b_LemmaSynthEth,

@@ -60,6 +60,13 @@ contract LemmaSwap is AccessControl {
         assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
     }
 
+    function rescueFunds(address token, uint256 amount)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        TransferHelper.safeTransfer(token, msg.sender, amount);
+    }
+
     function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
         require(_usdl != address(0), "! address");
         usdl = IUSDLemma(_usdl);
@@ -286,8 +293,11 @@ contract LemmaSwap is AccessControl {
         address to
     ) internal returns (uint256) {
         require(amountIn > 0, "! tokenIn amount");
-        uint256 amountIn1e_18 = convertIn18_decimals(IERC20Decimals(tokenIn), amountIn);
-        {   
+        uint256 amountIn1e_18 = convertIn18_decimals(
+            IERC20Decimals(tokenIn),
+            amountIn
+        );
+        {
             // static block: to handle stack to deep error
             if (from != address(this)) {
                 TransferHelper.safeTransferFrom(
@@ -297,24 +307,24 @@ contract LemmaSwap is AccessControl {
                     amountIn
                 );
             }
-        
+
             uint256 protocolFeesInTokenInDecimal = convertInToken_decimals(
-                IERC20Decimals(tokenIn), 
+                IERC20Decimals(tokenIn),
                 getProtocolFeesTokenIn(tokenIn, amountIn1e_18)
             );
             TransferHelper.safeTransfer(
-                tokenIn, 
-                feesAccumulator, 
+                tokenIn,
+                feesAccumulator,
                 protocolFeesInTokenInDecimal
             );
             uint256 protocolFees1e_18 = convertIn18_decimals(
-                IERC20Decimals(tokenIn), 
+                IERC20Decimals(tokenIn),
                 protocolFeesInTokenInDecimal
             );
-            amountIn1e_18 = protocolFees1e_18 > 0 ? 
-                amountIn1e_18 - protocolFees1e_18 : 
-                amountIn1e_18;
-            
+            amountIn1e_18 = protocolFees1e_18 > 0
+                ? amountIn1e_18 - protocolFees1e_18
+                : amountIn1e_18;
+
             // static block end
         }
 
@@ -363,20 +373,21 @@ contract LemmaSwap is AccessControl {
         return netCollateralToGetBack;
     }
 
-    function convertIn18_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
+    function convertIn18_decimals(IERC20Decimals token, uint256 amount)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 tokenDecimal = token.decimals();
-        return ((amount * 1e18) / (10 ** tokenDecimal)); 
+        return ((amount * 1e18) / (10**tokenDecimal));
     }
 
-    function convertInToken_decimals(IERC20Decimals token, uint256 amount) internal view returns(uint256) {
-        uint256 tokenDecimal = token.decimals();
-        return ((amount * (10 ** tokenDecimal)) / 1e18); 
-    }
-    
-    function rescueFunds(address token, uint256 amount)
-        external
-        onlyRole(OWNER_ROLE)
+    function convertInToken_decimals(IERC20Decimals token, uint256 amount)
+        internal
+        view
+        returns (uint256)
     {
-        TransferHelper.safeTransfer(token, msg.sender, amount);
+        uint256 tokenDecimal = token.decimals();
+        return ((amount * (10**tokenDecimal)) / 1e18);
     }
 }

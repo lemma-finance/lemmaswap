@@ -15,13 +15,21 @@ import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 
 contract Collateral is ERC20 {
-    constructor(string memory name, string memory symbol, uint256 initialSupply) ERC20(name, symbol) {
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint256 initialSupply
+    ) ERC20(name, symbol) {
         _mint(msg.sender, initialSupply);
     }
 }
 
 contract Bank is Test {
-    function giveMoney(address token, address to, uint256 amount) external {
+    function giveMoney(
+        address token,
+        address to,
+        uint256 amount
+    ) external {
         deal(token, to, amount);
     }
 }
@@ -44,13 +52,28 @@ contract MockUniV3Router {
         nextAmount = _amount;
     }
 
-    function exactInputSingle(ISwapRouter.ExactInputSingleParams memory params) external returns (uint256) {
+    function exactInputSingle(ISwapRouter.ExactInputSingleParams memory params)
+        external
+        returns (uint256)
+    {
         if (address(router) != address(0)) {
-            if (IERC20(params.tokenIn).allowance(address(this), address(router)) != type(uint256).max) {
-                IERC20(params.tokenIn).approve(address(router), type(uint256).max);
+            if (
+                IERC20(params.tokenIn).allowance(
+                    address(this),
+                    address(router)
+                ) != type(uint256).max
+            ) {
+                IERC20(params.tokenIn).approve(
+                    address(router),
+                    type(uint256).max
+                );
             }
             // uint256 balanceBefore = IERC20(params.tokenOut).balanceOf(address(this));
-            IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                params.amountIn
+            );
             uint256 result = router.exactInputSingle(params);
             // uint256 balanceAfter = IERC20(params.tokenOut).balanceOf(address(this));
             // uint256 result = uint256(int256(balanceAfter) - int256(balanceBefore));
@@ -59,26 +82,54 @@ contract MockUniV3Router {
             // IERC20(params.tokenOut).transfer(msg.sender, result);
             return result;
         } else {
-            IERC20(params.tokenIn).transferFrom(msg.sender, address(this), params.amountIn);
-            bank.giveMoney(params.tokenOut, address(params.recipient), nextAmount);
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                params.amountIn
+            );
+            bank.giveMoney(
+                params.tokenOut,
+                address(params.recipient),
+                nextAmount
+            );
             return nextAmount;
         }
     }
 
-    function exactOutputSingle(ISwapRouter.ExactOutputSingleParams memory params) external returns (uint256) {
+    function exactOutputSingle(
+        ISwapRouter.ExactOutputSingleParams memory params
+    ) external returns (uint256) {
         if (address(router) != address(0)) {
-            if (IERC20(params.tokenIn).allowance(address(this), address(router)) != type(uint256).max) {
-                IERC20(params.tokenIn).approve(address(router), type(uint256).max);
+            if (
+                IERC20(params.tokenIn).allowance(
+                    address(this),
+                    address(router)
+                ) != type(uint256).max
+            ) {
+                IERC20(params.tokenIn).approve(
+                    address(router),
+                    type(uint256).max
+                );
             }
             bank.giveMoney(params.tokenIn, address(this), 1e40);
-            uint256 balanceBefore = IERC20(params.tokenIn).balanceOf(address(this));
+            uint256 balanceBefore = IERC20(params.tokenIn).balanceOf(
+                address(this)
+            );
             uint256 result = router.exactOutputSingle(params);
-            uint256 balanceAfter = IERC20(params.tokenIn).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(params.tokenIn).balanceOf(
+                address(this)
+            );
             require(balanceBefore > balanceAfter, "exactOutputSingle T1");
-            uint256 deltaBalance = uint256(int256(balanceBefore) - int256(balanceAfter));
+            uint256 deltaBalance = uint256(
+                int256(balanceBefore) - int256(balanceAfter)
+            );
             require(deltaBalance <= params.amountInMaximum);
             // uint256 balanceBefore = IERC20(params.tokenOut).balanceOf(address(this));
-            IERC20(params.tokenIn).transferFrom(msg.sender, address(this), deltaBalance);
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                deltaBalance
+            );
 
             // uint256 balanceAfter = IERC20(params.tokenOut).balanceOf(address(this));
             // uint256 result = uint256(int256(balanceAfter) - int256(balanceBefore));
@@ -87,8 +138,16 @@ contract MockUniV3Router {
             // IERC20(params.tokenOut).transfer(msg.sender, result);
             return result;
         } else {
-            IERC20(params.tokenIn).transferFrom(msg.sender, address(this), nextAmount);
-            bank.giveMoney(params.tokenOut, address(params.recipient), params.amountOut);
+            IERC20(params.tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                nextAmount
+            );
+            bank.giveMoney(
+                params.tokenOut,
+                address(params.recipient),
+                params.amountOut
+            );
             return nextAmount;
         }
     }
@@ -108,7 +167,8 @@ contract Deployment is Test {
     address public admin;
 
     bytes32 public constant LEMMA_SWAP = keccak256("LEMMA_SWAP");
-    bytes32 public constant FEES_TRANSFER_ROLE = keccak256("FEES_TRANSFER_ROLE");
+    bytes32 public constant FEES_TRANSFER_ROLE =
+        keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
     ISwapRouter public routerUniV3;
@@ -164,7 +224,10 @@ contract Deployment is Test {
         chainId = block.chainid;
 
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/src/test/fixtures/lemmaAddresses.test.json");
+        string memory path = string.concat(
+            root,
+            "/src/test/fixtures/lemmaAddresses.test.json"
+        );
         string memory json = vm.readFile(path);
 
         bytes memory _lemmaAddresses;
@@ -187,17 +250,23 @@ contract Deployment is Test {
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
         admin = perpAddresses.c_admin;
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L45
-        testnet_optimism_kovan.WETH = address(lemmaAddresses.g_usdlCollateralWeth);
+        testnet_optimism_kovan.WETH = address(
+            lemmaAddresses.g_usdlCollateralWeth
+        );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L49
-        testnet_optimism_kovan.WBTC = address(lemmaAddresses.f_usdlCollateralWbtc);
+        testnet_optimism_kovan.WBTC = address(
+            lemmaAddresses.f_usdlCollateralWbtc
+        );
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L41
         testnet_optimism_kovan.USDC = address(lemmaAddresses.e_usdc);
 
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L307
         // testnet_optimism_kovan.USDLemma = address(0xc34E7f18185b381d1d7aab8aeEC507e01f4276EE);
-        testnet_optimism_kovan.USDLemma = address(lemmaAddresses.h_usdLemmaAddress);
+        testnet_optimism_kovan.USDLemma = address(
+            lemmaAddresses.h_usdLemmaAddress
+        );
         testnet_optimism_kovan.xusdl = address(lemmaAddresses.k_xUSDLAddress);
 
         // testnet_optimism_kovan.LemmaSynthEth = 0xac7b51F1D5Da49c64fAe5ef7D5Dc2869389A46FC;
@@ -247,14 +316,24 @@ contract Deployment is Test {
         );
         feesAccumulator.grantRole(OWNER_ROLE, address(this));
 
-        feesAccumulator.setCollateralToDexIndexForUsdl(testnet_optimism_kovan.WETH, 0);
-        feesAccumulator.setCollateralToDexIndexForUsdl(testnet_optimism_kovan.WBTC, 1);
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            testnet_optimism_kovan.WETH,
+            0
+        );
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            testnet_optimism_kovan.WBTC,
+            1
+        );
 
         feesAccumulator.setCollateralToSynth(
-            testnet_optimism_kovan.WETH, testnet_optimism_kovan.LemmaSynthEth, testnet_optimism_kovan.xLemmaSynthEth
+            testnet_optimism_kovan.WETH,
+            testnet_optimism_kovan.LemmaSynthEth,
+            testnet_optimism_kovan.xLemmaSynthEth
         );
         feesAccumulator.setCollateralToSynth(
-            testnet_optimism_kovan.WBTC, testnet_optimism_kovan.LemmaSynthBtc, testnet_optimism_kovan.xLemmaSynthBtc
+            testnet_optimism_kovan.WBTC,
+            testnet_optimism_kovan.LemmaSynthBtc,
+            testnet_optimism_kovan.xLemmaSynthBtc
         );
     }
 
