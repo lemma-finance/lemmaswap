@@ -39,7 +39,7 @@ contract LemmaSwapDeployTestnet is Script {
             "/src/test/fixtures/lemmaAddresses.script.json"
         );
         string memory json = vm.readFile(path);
-        bytes memory addresses = json.parseRaw(".Addresses[0]");
+        bytes memory addresses = json.parseRaw(".Addresses[1]");
 
         LemmaPerpAddresses memory lemmaPerpAddresses = abi.decode(
             addresses,
@@ -61,7 +61,7 @@ contract LemmaSwapDeployTestnet is Script {
         );
         lemmaSwap.setCollateralToDexIndex(
             lemmaPerpAddresses.f_usdlCollateralWbtc,
-            1
+            0
         );
 
         usdLemma.grantRole(LEMMA_SWAP, address(lemmaSwap));
@@ -77,7 +77,7 @@ contract LemmaSwapDeployTestnet is Script {
         );
         feesAccumulator.setCollateralToDexIndexForUsdl(
             lemmaPerpAddresses.f_usdlCollateralWbtc,
-            1
+            0
         );
         feesAccumulator.setCollateralToSynth(
             lemmaPerpAddresses.g_usdlCollateralWeth,
