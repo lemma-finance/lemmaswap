@@ -17,13 +17,22 @@ interface IPerpLemma {
 
     function getMinMarginSafeThreshold() external view returns (uint256);
 
-    function getCollateralRatios() external view returns (uint24 imRatio, uint24 mmRatio);
+    function getCollateralRatios()
+        external
+        view
+        returns (uint24 imRatio, uint24 mmRatio);
 
     function getFreeCollateral() external view returns (uint256);
 
-    function computeRequiredUSDCForTrade(uint256 amount, bool isShort) external view returns (uint256);
+    function computeRequiredUSDCForTrade(uint256 amount, bool isShort)
+        external
+        view
+        returns (uint256);
 
-    function isAdditionalUSDCAcceptable(uint256 amount) external view returns (bool);
+    function isAdditionalUSDCAcceptable(uint256 amount)
+        external
+        view
+        returns (bool);
 
     function setMinFreeCollateral(uint256 _margin) external;
 
@@ -39,13 +48,19 @@ interface IPerpLemma {
 
     function hasSettled() external view returns (bool);
 
-    function getMarkPrice() external view returns(uint256);
+    function getMarkPrice() external view returns (uint256);
 
-    function getPendingFundingPayment() external view returns(int256);
+    function getPendingFundingPayment() external view returns (int256);
 
     function settlePendingFundingPayments() external;
 
-    function distributeFundingPayments() external returns(bool, uint256, uint256);
+    function distributeFundingPayments()
+        external
+        returns (
+            bool,
+            uint256,
+            uint256
+        );
 
     function getCollateralBackAfterSettlement(
         uint256 amount,
@@ -80,28 +95,47 @@ interface IPerpLemma {
 
     function getCollateralTokens() external view returns (address[] memory res);
 
-    function getRequiredUSDCToBackMinting(uint256 amount, bool isShort) external view returns (bool, uint256);
+    function getRequiredUSDCToBackMinting(uint256 amount, bool isShort)
+        external
+        view
+        returns (bool, uint256);
 
     function getUsdlCollateralDecimals() external view returns (uint256);
 
     function getIndexPrice() external view returns (uint256);
 
     // Convenience trading functions
-    function openLongWithExactBase(uint256 amount) external returns (uint256, uint256);
+    function openLongWithExactBase(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function openLongWithExactQuote(uint256 amount) external returns (uint256, uint256);
+    function openLongWithExactQuote(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function closeLongWithExactBase(uint256 amount) external returns (uint256, uint256);
+    function closeLongWithExactBase(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function closeLongWithExactQuote(uint256 amount) external returns (uint256, uint256);
+    function closeLongWithExactQuote(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function openShortWithExactBase(uint256 amount) external returns (uint256, uint256);
+    function openShortWithExactBase(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function openShortWithExactQuote(uint256 amount) external returns (uint256, uint256);
+    function openShortWithExactQuote(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function closeShortWithExactBase(uint256 amount) external returns (uint256, uint256);
+    function closeShortWithExactBase(uint256 amount)
+        external
+        returns (uint256, uint256);
 
-    function closeShortWithExactQuote(uint256 amount) external returns (uint256, uint256);
+    function closeShortWithExactQuote(uint256 amount)
+        external
+        returns (uint256, uint256);
 
     /////////
 
@@ -111,7 +145,10 @@ interface IPerpLemma {
         bool isOpenShort
     ) external;
 
-    function getMaxSettlementTokenAcceptableByVault() external view returns (uint256);
+    function getMaxSettlementTokenAcceptableByVault()
+        external
+        view
+        returns (uint256);
 
     function getSettlementTokenAmountInVault() external view returns (int256);
 
@@ -149,4 +186,6 @@ interface IPerpLemma {
     function usdc() external view returns (IERC20Decimals);
 
     function settle() external;
+
+    function grantRole(bytes32 role, address account) external;
 }

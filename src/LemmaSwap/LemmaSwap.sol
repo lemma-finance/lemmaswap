@@ -342,7 +342,6 @@ contract LemmaSwap is AccessControl {
             amountOutMin,
             IERC20(tokenOut)
         );
-        uint256 wbtcBal = IERC20Decimals(tokenOut).balanceOf(address(this));
         uint256 protocolFeesOut = getProtocolFeesTokenOut(
             tokenOut,
             IERC20Decimals(tokenOut).balanceOf(address(this))

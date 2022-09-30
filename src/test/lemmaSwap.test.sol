@@ -17,6 +17,10 @@ interface IPerpLemma {
     function getAccountValue() external view returns (int256 value_1e18);
 
     function getIndexPrice() external view returns (uint256 price);
+
+    function grantRole(bytes32 role, address account) external;
+
+    function depositSettlementToken(uint256 _amount) external;
 }
 
 contract Minter {
@@ -50,6 +54,7 @@ contract ContractTest is Test {
     bytes32 public constant FEES_TRANSFER_ROLE =
         keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant USDC_TREASURY = keccak256("USDC_TREASURY");
 
     receive() external payable {}
 
@@ -65,13 +70,32 @@ contract ContractTest is Test {
         TransferHelper.safeTransferETH(address(d), 100e18);
         d.deployTestnet(1);
 
-        address perpLemma = d.usdl().perpetualDEXWrappers(1, address(d.wbtc()));
+        address perpLemma = d.usdl().perpetualDEXWrappers(0, address(d.wbtc()));
         vm.startPrank(d.admin());
         IPerpLemma(perpLemma).setIsUsdlCollateralTailAsset(true);
         vm.stopPrank();
 
         vm.startPrank(address(d));
         d.feesAccumulator().grantRole(FEES_TRANSFER_ROLE, address(this));
+        vm.stopPrank();
+    }
+
+    function depositUSDC() public {
+        address perpLemmaEth = 0x29b159aE784Accfa7Fb9c7ba1De272bad75f5674;
+        address perpLemmaBtc = 0xe161C6c9F2fC74AC97300e6f00648284d83cBd19;
+
+        vm.startPrank(d.admin());
+        deal(d.getAddresses().USDC, d.admin(), 100000e18);
+
+        IPerpLemma(perpLemmaEth).grantRole(USDC_TREASURY, d.admin());
+        IPerpLemma(perpLemmaBtc).grantRole(USDC_TREASURY, d.admin());
+
+        IERC20(d.getAddresses().USDC).approve(perpLemmaEth, type(uint256).max);
+        IERC20(d.getAddresses().USDC).approve(perpLemmaBtc, type(uint256).max);
+
+        IPerpLemma(perpLemmaEth).depositSettlementToken(5000e6);
+        IPerpLemma(perpLemmaBtc).depositSettlementToken(5000e6);
+
         vm.stopPrank();
     }
 
@@ -82,7 +106,7 @@ contract ContractTest is Test {
         m1.mint(IERC20Decimals(address(d.weth())), 0, 1e18); // 1 ether
         // Trying to mint USDL with WBTC
         Minter m2 = new Minter(d);
-        m2.mint(IERC20Decimals(address(d.wbtc())), 1, 4374840); // 0.4374840 WBTC
+        m2.mint(IERC20Decimals(address(d.wbtc())), 0, 4374840); // 0.4374840 WBTC
     }
 
     // for e.g if we want to swap weth -> wbtc
@@ -124,6 +148,7 @@ contract ContractTest is Test {
     }
 
     function testSetupForSwap() public {
+        depositUSDC();
         setUpForSwap();
     }
 
@@ -132,7 +157,7 @@ contract ContractTest is Test {
     }
 
     function testSwapExactTokensForTokens() public noAsstesLeft {
-        setUpForSwap();
+        testSetupForSwap();
 
         d.askForMoney(address(d.weth()), 10e18);
 
@@ -154,8 +179,6 @@ contract ContractTest is Test {
             address(this),
             block.timestamp
         );
-
-        console.log("amountsOut:", amountsOut[1]);
 
         assertTrue(
             d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn

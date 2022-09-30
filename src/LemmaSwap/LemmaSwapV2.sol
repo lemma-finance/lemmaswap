@@ -22,6 +22,7 @@ contract LemmaSwapV2 is AccessControl {
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
+    uint256 public dexIndex = 0;
 
     // Assumption: there is 1:1 collateral token to dexIndex relationship
     mapping(address => uint8) public collateralToDexIndex;
@@ -44,8 +45,13 @@ contract LemmaSwapV2 is AccessControl {
     }
 
     event NewUSDL(address);
+    event NewFeesAccumulator(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
+    event PerpetualDexWrapperAdded(
+        address indexed collateral,
+        address indexed dexWrapper
+    );
 
     modifier validCollateral(address collateral) {
         require(collateral != address(0), "!collateral");
@@ -73,18 +79,45 @@ contract LemmaSwapV2 is AccessControl {
         TransferHelper.safeTransfer(token, msg.sender, amount);
     }
 
-    function addPerpetualDEXWrapper(
-        uint256 perpetualDEXIndex,
-        address collateralAddress,
-        address perpetualDEXWrapperAddress
-    ) public onlyRole(OWNER_ROLE) {
-        perpetualDEXWrappers[collateralAddress] = perpetualDEXWrapperAddress;
+    /**
+        @notice addPerpetualDEXWrapper set perpDexAddress for specific collateral from usdl contract
+    */
+    function addPerpetualDEXWrapper(address collateralAddress)
+        public
+        onlyRole(OWNER_ROLE)
+    {
+        address perpDEXWrapper = usdl.perpetualDEXWrappers(
+            dexIndex,
+            collateralAddress
+        );
+        require(
+            address(perpDEXWrapper) != address(0),
+            "DEX Wrapper should not ZERO address"
+        );
+        perpetualDEXWrappers[collateralAddress] = perpDEXWrapper;
+        emit PerpetualDexWrapperAdded(collateralAddress, perpDEXWrapper);
     }
 
+    /**
+        @notice setUSDL set address of usdLemma contract address 
+    */
     function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
         require(_usdl != address(0), "! address");
         usdl = IUSDLemma(_usdl);
         emit NewUSDL(address(usdl));
+    }
+
+    /**
+        @notice setFeeAccumulator set address 
+        where all the tokenIn and tokenOut fees will accumulate 
+    */
+    function setFeeAccumulator(address _feesAccumulator)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        require(_feesAccumulator != address(0), "! address");
+        feesAccumulator = _feesAccumulator;
+        emit NewFeesAccumulator(_feesAccumulator);
     }
 
     /**
@@ -306,28 +339,18 @@ contract LemmaSwapV2 is AccessControl {
         address from,
         address to
     ) internal returns (uint256) {
-        IPerpLemma perpDEXWrapper = IPerpLemma(perpetualDEXWrappers[address(tokenIn)]);
+        IPerpLemma perpDEXWrapperIn = IPerpLemma(perpetualDEXWrappers[tokenIn]);
+        IPerpLemma perpDEXWrapperOut = IPerpLemma(
+            perpetualDEXWrappers[tokenOut]
+        );
+
         require(amountIn > 0, "! tokenIn amount");
         {
             // static block: to handle stack to deep error
-            // if (from != address(this)) {
-            //     TransferHelper.safeTransferFrom(
-            //         tokenIn,
-            //         from,
-            //         address(this),
-            //         amountIn
-            //     );
-            // }
-
             uint256 protocolFeesInTokenInDecimal = getProtocolFeesTokenIn(
                 tokenIn,
                 amountIn
             );
-            // TransferHelper.safeTransfer(
-            //     tokenIn,
-            //     feesAccumulator,
-            //     protocolFeesInTokenInDecimal
-            // );
             TransferHelper.safeTransferFrom(
                 tokenIn,
                 from,
@@ -346,57 +369,64 @@ contract LemmaSwapV2 is AccessControl {
             amountIn
         );
 
-        // if (
-        //     IERC20Decimals(tokenIn).allowance(address(this), perpLemmaEth) <
-        //     amountIn
-        // ) {
-        //     IERC20Decimals(tokenIn).approve(perpLemmaEth, type(uint256).max);
-        // }
-
-        // usdl.depositToWExactCollateral(
-        //     address(this),
-        //     amountIn1e_18,
-        //     _convertCollateralToValidDexIndex(tokenIn),
-        //     0,
-        //     IERC20(tokenIn)
-        // );
-
         if (from != address(this)) {
+            // for other tokens
             TransferHelper.safeTransferFrom(
                 tokenIn,
-                from == address(this) ? address(this) : msg.sender,
-                perpLemmaEth,
+                from,
+                address(perpDEXWrapperIn),
                 amountIn
             );
         } else {
-            TransferHelper.safeTransfer(tokenIn,perpLemmaEth, amountIn);
+            // for swapExactETHForTokens method
+            // becuase after deposit Eth into WethContract, new minted weth will be with address(this) only
+            TransferHelper.safeTransfer(
+                tokenIn,
+                address(perpDEXWrapperIn),
+                amountIn
+            );
         }
-        IPerpLemma(perpLemmaEth).deposit(amountIn, tokenIn);
-        (, uint256 quote) = IPerpLemma(perpLemmaEth).openShortWithExactBase(amountIn1e_18);
-        IPerpLemma(perpLemmaEth).calculateMintingAsset(quote, IPerpLemma.Basis.IsUsdl, true);
+        perpDEXWrapperIn.deposit(amountIn, tokenIn);
+        (, uint256 quote) = perpDEXWrapperIn.openShortWithExactBase(
+            amountIn1e_18
+        );
+        perpDEXWrapperIn.calculateMintingAsset(
+            quote,
+            IPerpLemma.Basis.IsUsdl,
+            true
+        );
 
-        (uint256 base, ) = IPerpLemma(perpLemmaBtc).closeShortWithExactQuote(quote);
-        uint256 baseInTokenDecimal = convertInToken_decimals(IERC20Decimals(tokenOut), base);
-        IPerpLemma(perpLemmaBtc).withdraw(baseInTokenDecimal, tokenOut);
-        TransferHelper.safeTransferFrom(tokenOut, perpLemmaBtc, address(this), baseInTokenDecimal);
-    
+        (uint256 base, ) = perpDEXWrapperOut.closeShortWithExactQuote(quote);
+        uint256 baseInTokenDecimal = convertInToken_decimals(
+            IERC20Decimals(tokenOut),
+            base
+        );
+        perpDEXWrapperOut.withdraw(baseInTokenDecimal, tokenOut);
+
         uint256 protocolFeesOut = getProtocolFeesTokenOut(
             tokenOut,
-            IERC20Decimals(tokenOut).balanceOf(address(this))
+            baseInTokenDecimal
         );
-        TransferHelper.safeTransfer(
+
+        uint256 netCollateralToGetBack = baseInTokenDecimal - protocolFeesOut;
+
+        TransferHelper.safeTransferFrom(
             tokenOut,
-            usdl.lemmaTreasury(),
+            address(perpDEXWrapperOut),
+            feesAccumulator,
             protocolFeesOut
         );
-        uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(
-            address(this)
+        TransferHelper.safeTransferFrom(
+            tokenOut,
+            address(perpDEXWrapperOut),
+            to,
+            netCollateralToGetBack
         );
+
         require(
             netCollateralToGetBack >= amountOutMin,
             "! netCollateralToGetBack"
         );
-        TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
         _returnAllTokens(IERC20Decimals(address(usdl)), to);
         _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
