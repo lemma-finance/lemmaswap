@@ -5,7 +5,7 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
-import {Deployment, Collateral} from "../Contract.sol";
+import {Deployment, Collateral} from "../Contract_LV2.sol";
 import {IPerpVault} from "../interfaces/IPerpVault.sol";
 import "forge-std/Test.sol";
 
@@ -21,6 +21,8 @@ interface IPerpLemma {
     function grantRole(bytes32 role, address account) external;
 
     function depositSettlementToken(uint256 _amount) external;
+
+    function setUSDLemma(address _usdLemma) external;
 }
 
 contract Minter {
@@ -73,6 +75,7 @@ contract ContractTest is Test {
         keccak256("FEES_TRANSFER_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
     bytes32 public constant USDC_TREASURY = keccak256("USDC_TREASURY");
+    bytes32 public constant PERPLEMMA_ROLE = keccak256("PERPLEMMA_ROLE");
 
     receive() external payable {}
 
@@ -88,13 +91,40 @@ contract ContractTest is Test {
         TransferHelper.safeTransferETH(address(d), 100e18);
         d.deployTestnet(1);
 
-        address perpLemma = d.usdl().perpetualDEXWrappers(0, address(d.wbtc()));
+        address perpLemmaWbtc = d.usdl().perpetualDEXWrappers(
+            0,
+            address(d.wbtc())
+        );
+        address perpLemmaWeth = d.usdl().perpetualDEXWrappers(
+            0,
+            address(d.weth())
+        );
         vm.startPrank(d.admin());
-        IPerpLemma(perpLemma).setIsUsdlCollateralTailAsset(true);
+
+        IPerpLemma(perpLemmaWbtc).setIsUsdlCollateralTailAsset(true);
+
+        IPerpLemma(perpLemmaWbtc).grantRole(
+            PERPLEMMA_ROLE,
+            address(d.lemmaSwap())
+        );
+        IPerpLemma(perpLemmaWeth).grantRole(
+            PERPLEMMA_ROLE,
+            address(d.lemmaSwap())
+        );
+
+        // it will be change
+        // temporary solution
+        IPerpLemma(perpLemmaWbtc).setUSDLemma(address(d.lemmaSwap()));
+        IPerpLemma(perpLemmaWbtc).setUSDLemma(address(d.usdl()));
+        IPerpLemma(perpLemmaWeth).setUSDLemma(address(d.lemmaSwap()));
+        IPerpLemma(perpLemmaWeth).setUSDLemma(address(d.usdl()));
+
         vm.stopPrank();
 
         vm.startPrank(address(d));
         d.feesAccumulator().grantRole(FEES_TRANSFER_ROLE, address(this));
+        d.lemmaSwap().addPerpetualDEXWrapper(address(d.weth()));
+        d.lemmaSwap().addPerpetualDEXWrapper(address(d.wbtc()));
         vm.stopPrank();
     }
 
@@ -179,6 +209,7 @@ contract ContractTest is Test {
         uint256 wbtcInitialBalance = d.wbtc().balanceOf(address(this));
 
         d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
+        d.wbtc().approve(address(d.lemmaSwap()), type(uint256).max);
 
         address[] memory path = new address[](2);
         path[0] = address(d.weth());
@@ -193,8 +224,6 @@ contract ContractTest is Test {
             address(this),
             block.timestamp
         );
-
-        console.log("amountsOut:", amountsOut[1]);
 
         assertTrue(
             d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn

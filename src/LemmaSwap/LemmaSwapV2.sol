@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.14;
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+import {IPerpLemma} from "../interfaces/IPerpLemma.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
-contract LemmaSwap is AccessControl, ReentrancyGuard {
+contract LemmaSwapV2 is AccessControl, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
@@ -22,9 +24,14 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
 
+    // for all the perp collaterals, we set 0 in usdl contracts
+    // so it is fixed(dexIndex = 0)
+    uint256 public dexIndex = 0;
+
     // Assumption: there is 1:1 collateral token to dexIndex relationship
-    // this would be break when we integrate anohter perpetual DEX
     mapping(address => uint8) public collateralToDexIndex;
+    // Collateral to perpDexWrapper mapping(It should be same like usdl perpDex mapping)
+    mapping(address => address) public perpetualDEXWrappers;
 
     /// @param _usdl usdLemma contract address
     /// @param _weth Weth erc20 contract address
@@ -50,12 +57,16 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     event NewFeesAccumulator(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
+    event PerpetualDexWrapperAdded(
+        address indexed collateral,
+        address indexed dexWrapper
+    );
 
     /**
         @notice Check collateral is not zero address
     */
     modifier validCollateral(address collateral) {
-        require(collateral != address(0), "Collateral is not valid");
+        require(collateral != address(0), "!collateral");
         _;
     }
 
@@ -63,7 +74,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         @notice Check fees is not le to 1e6
     */
     modifier validFees(uint256 fees) {
-        require(fees <= 1e6, "Fees out of range");
+        require(fees <= 1e6, "!fees");
         _;
     }
 
@@ -71,7 +82,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         @notice Check deadline is not pass
     */
     modifier ensure(uint256 deadline) {
-        require(deadline >= block.timestamp, "Trade expired");
+        require(deadline >= block.timestamp, "!trade expired");
         _;
     }
 
@@ -83,10 +94,39 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     }
 
     /**
+        @notice rescueFunds function will take all the unnecessary funds to safe address 
+    */
+    function rescueFunds(address token, uint256 amount)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        TransferHelper.safeTransfer(token, msg.sender, amount);
+    }
+
+    /**
+        @notice addPerpetualDEXWrapper set perpDexAddress for specific collateral from usdl contract
+    */
+    function addPerpetualDEXWrapper(address collateralAddress)
+        public
+        onlyRole(OWNER_ROLE)
+    {
+        address perpDEXWrapper = usdl.perpetualDEXWrappers(
+            dexIndex,
+            collateralAddress
+        );
+        require(
+            address(perpDEXWrapper) != address(0),
+            "DEX Wrapper should not ZERO address"
+        );
+        perpetualDEXWrappers[collateralAddress] = perpDEXWrapper;
+        emit PerpetualDexWrapperAdded(collateralAddress, perpDEXWrapper);
+    }
+
+    /**
         @notice setUSDL set address of usdLemma contract address 
     */
     function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
-        require(_usdl != address(0), "Zero address is not allowed");
+        require(_usdl != address(0), "! address");
         usdl = IUSDLemma(_usdl);
         emit NewUSDL(address(usdl));
     }
@@ -99,7 +139,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         external
         onlyRole(OWNER_ROLE)
     {
-        require(_feesAccumulator != address(0), "Zero address is not allowed");
+        require(_feesAccumulator != address(0), "! address");
         feesAccumulator = _feesAccumulator;
         emit NewFeesAccumulator(_feesAccumulator);
     }
@@ -131,22 +171,68 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     }
 
     /**
-        @notice LemmaSwap fees to be taken on token
+        @notice LemmaSwap fees to be taken on input token
         @dev The fees are in 1e6 format
      */
-    function getProtocolFeesCoeff() public view returns (uint256) {
+    function getProtocolFeesCoeffTokenIn() public view returns (uint256) {
         return (lemmaSwapFees / 2);
+    }
+
+    /**
+        @notice LemmaSwap fees to be taken on output token
+        @dev The fees are in 1e6 format
+     */
+    function getProtocolFeesCoeffTokenOut() public view returns (uint256) {
+        return (lemmaSwapFees / 2);
+    }
+
+    /**
+        @notice Computes the total amount of fees on input token
+     */
+    function getProtocolFeesTokenIn(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
+        return (amount * getProtocolFeesCoeffTokenIn()) / 1e6;
     }
 
     /**
         @notice Computes the total amount of fees on output token
      */
-    function getProtocolFees(address token, uint256 amount)
-        public
+    function getProtocolFeesTokenOut(
+        address, /*token*/
+        uint256 amount
+    ) public view returns (uint256) {
+        return (amount * getProtocolFeesCoeffTokenOut()) / 1e6;
+    }
+
+    /**
+        @notice getAdjustedOutputAmount will compute output ampunt after fees
+     */
+    function getAdjustedOutputAmount(address token, uint256 amount)
+        external
         view
         returns (uint256)
     {
-        return (amount * getProtocolFeesCoeff()) / 1e6;
+        uint256 _dexIndex = _convertCollateralToValidDexIndex(token);
+        uint256 redeemFees = usdl.getFees(_dexIndex, token, false);
+        return (amount * 1e6) / (1e6 - redeemFees);
+    }
+
+    /**
+        @notice Returns the max possible output for a given token
+        @dev The max possible output corresponds to the max amount of collateral that is possible to withdraw from the underlying protocol 
+     */
+    function getMaxOutput(address token) external view returns (int256) {
+        if (collateralToDexIndex[token] == 0) {
+            // Collateral not supported
+            return 0;
+        }
+        return
+            usdl.getTotalPosition(
+                _convertCollateralToValidDexIndex(token),
+                token
+            );
     }
 
     /**
@@ -171,7 +257,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path.length == 2, "Multi-hop swap not supported yet");
+        require(path.length == 2, "! Multi-hop swap not supported yet");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
@@ -205,8 +291,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path.length == 2, "Multi-hop swap not supported yet");
-        require(path[0] == address(weth), "Invalid path");
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
         amounts = new uint256[](path.length);
         amounts[0] = msg.value;
@@ -241,8 +327,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         ensure(deadline)
         returns (uint256[] memory amounts)
     {
-        require(path.length == 2, "Multi-hop swap not supported yet");
-        require(path[1] == address(weth), "Invalid path");
+        require(path.length == 2, "! Multi-hop swap not supported yet");
+        require(path[1] == address(weth), "! Invalid path");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
         amounts[1] = _swapWithExactInput(
@@ -254,6 +340,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
             address(this)
         );
         uint256 wethAmount = weth.balanceOf(address(this));
+        require(wethAmount > amountOutMin, "! Amount Out Min");
         weth.withdraw(wethAmount);
         TransferHelper.safeTransferETH(to, wethAmount);
     }
@@ -268,10 +355,10 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         view
         returns (uint256)
     {
-        require(collateral != address(0), "Zero address is not allowed");
+        require(collateral != address(0), "!collateral");
         require(
             collateralToDexIndex[collateral] != 0,
-            "Collateral is not supported"
+            "Collateral not supported"
         );
         return collateralToDexIndex[collateral] - 1;
     }
@@ -284,67 +371,99 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         uint256 amountOutMin,
         address from,
         address to
-    ) internal returns (uint256 amountOut) {
-        require(amountIn > 0, "Zero amountIn is not allowed");
-        if (from != address(this)) {
+    ) internal returns (uint256) {
+        IPerpLemma perpDEXWrapperIn = IPerpLemma(perpetualDEXWrappers[tokenIn]);
+        IPerpLemma perpDEXWrapperOut = IPerpLemma(
+            perpetualDEXWrappers[tokenOut]
+        );
+
+        require(amountIn > 0, "! tokenIn amount");
+        {
+            // static block: to handle stack to deep error
+            uint256 protocolFeesInTokenInDecimal = getProtocolFeesTokenIn(
+                tokenIn,
+                amountIn
+            );
             TransferHelper.safeTransferFrom(
                 tokenIn,
                 from,
-                address(this),
-                amountIn
+                feesAccumulator,
+                protocolFeesInTokenInDecimal
             );
+            amountIn = protocolFeesInTokenInDecimal > 0
+                ? amountIn - protocolFeesInTokenInDecimal
+                : amountIn;
+
+            // static block end
         }
 
-        uint256 protocolFeesIn = getProtocolFees(tokenIn, amountIn);
-        TransferHelper.safeTransfer(tokenIn, feesAccumulator, protocolFeesIn);
-        amountIn = amountIn - protocolFeesIn;
-
-        uint256 amountIn18Decimals = convertAmountIn18Decimals(
+        uint256 amountIn1e_18 = convertIn18_decimals(
             IERC20Decimals(tokenIn),
             amountIn
         );
 
-        // give approval of tokenIn to USDL if not given already
-        if (
-            IERC20Decimals(tokenIn).allowance(address(this), address(usdl)) <
-            amountIn
-        ) {
-            IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
+        if (from != address(this)) {
+            // for other tokens
+            TransferHelper.safeTransferFrom(
+                tokenIn,
+                from,
+                address(perpDEXWrapperIn),
+                amountIn
+            );
+        } else {
+            // for swapExactETHForTokens method
+            // becuase after deposit Eth into WethContract, new minted weth will be with address(this) only
+            TransferHelper.safeTransfer(
+                tokenIn,
+                address(perpDEXWrapperIn),
+                amountIn
+            );
         }
-
-        // mint USDL with tokenIn as collateral
-        usdl.depositToWExactCollateral(
-            address(this),
-            amountIn18Decimals,
-            _convertCollateralToValidDexIndex(tokenIn),
-            0,
-            IERC20(tokenIn)
+        perpDEXWrapperIn.deposit(amountIn, tokenIn);
+        (, uint256 quote) = perpDEXWrapperIn.openShortWithExactBase(
+            amountIn1e_18
         );
-        uint256 usdlAmount = usdl.balanceOf(address(this));
-        // burn USDL getting tokenOut collateral back
-        usdl.withdrawTo(
-            address(this),
-            usdlAmount,
-            _convertCollateralToValidDexIndex(tokenOut),
-            amountOutMin,
-            IERC20(tokenOut)
+        perpDEXWrapperIn.calculateMintingAsset(
+            quote,
+            IPerpLemma.Basis.IsUsdl,
+            true
         );
 
-        amountOut = IERC20Decimals(tokenOut).balanceOf(address(this));
-        uint256 protocolFeesOut = getProtocolFees(tokenOut, amountOut);
-        TransferHelper.safeTransfer(tokenOut, feesAccumulator, protocolFeesOut);
+        (uint256 base, ) = perpDEXWrapperOut.closeShortWithExactQuote(quote);
+        uint256 baseInTokenDecimal = convertInToken_decimals(
+            IERC20Decimals(tokenOut),
+            base
+        );
+        perpDEXWrapperOut.withdraw(baseInTokenDecimal, tokenOut);
 
-        amountOut = amountOut - protocolFeesOut;
-        require(amountOut >= amountOutMin, "Insufficient amountOut");
-        if (to != address(this)) {
-            TransferHelper.safeTransfer(tokenOut, to, amountOut);
-        }
+        uint256 protocolFeesOut = getProtocolFeesTokenOut(
+            tokenOut,
+            baseInTokenDecimal
+        );
+
+        uint256 netCollateralToGetBack = baseInTokenDecimal - protocolFeesOut;
+
+        TransferHelper.safeTransferFrom(
+            tokenOut,
+            address(perpDEXWrapperOut),
+            feesAccumulator,
+            protocolFeesOut
+        );
+        TransferHelper.safeTransferFrom(
+            tokenOut,
+            address(perpDEXWrapperOut),
+            to,
+            netCollateralToGetBack
+        );
+
+        require(
+            netCollateralToGetBack >= amountOutMin,
+            "! netCollateralToGetBack"
+        );
+        return netCollateralToGetBack;
     }
 
-    /**
-        @notice convertAmountIn18Decimals convert amount in token decimals to 1e18 decimals
-    */
-    function convertAmountIn18Decimals(IERC20Decimals token, uint256 amount)
+    function convertIn18_decimals(IERC20Decimals token, uint256 amount)
         internal
         view
         returns (uint256)
@@ -353,9 +472,6 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         return ((amount * 1e18) / (10**tokenDecimal));
     }
 
-    /**
-        @notice convertInToken_decimals convert amount 1e18 decimals to tokenDecimals
-    */
     function convertInToken_decimals(IERC20Decimals token, uint256 amount)
         internal
         view
@@ -363,15 +479,5 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     {
         uint256 tokenDecimal = token.decimals();
         return ((amount * (10**tokenDecimal)) / 1e18);
-    }
-
-    /**
-        @notice rescueFunds function will take all the unnecessary funds to safe address 
-    */
-    function rescueFunds(address token, uint256 amount)
-        external
-        onlyRole(OWNER_ROLE)
-    {
-        TransferHelper.safeTransfer(token, msg.sender, amount);
     }
 }
