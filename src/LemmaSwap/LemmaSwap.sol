@@ -150,22 +150,6 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     }
 
     /**
-        @notice Returns the max possible output for a given token
-        @dev The max possible output corresponds to the max amount of collateral that is possible to withdraw from the underlying protocol 
-     */
-    function getMaxOutput(address token) external view returns (int256) {
-        if (collateralToDexIndex[token] == 0) {
-            // Collateral not supported
-            return 0;
-        }
-        return
-            usdl.getTotalPosition(
-                _convertCollateralToValidDexIndex(token),
-                token
-            );
-    }
-
-    /**
         @notice     Swaps an exact amount of input tokens for an amount of output tokens that is computed as a function of the input and price 
         @param      amountIn        The amount of the input token 
         @param      amountOutMin    The minimum amount of output token
