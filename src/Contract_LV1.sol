@@ -9,7 +9,7 @@ import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
 import {ILemmaSynth} from "./interfaces/ILemmaSynth.sol";
 import {IXUSDL} from "./interfaces/IXUSDL.sol";
 import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
-import {LemmaSwapV2} from "./LemmaSwap/LemmaSwapV2.sol";
+import {LemmaSwap} from "./LemmaSwap/LemmaSwap.sol";
 import {FeesAccumulator} from "./LemmaSwap/FeesAccumulator.sol";
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
@@ -158,7 +158,7 @@ contract Deployment is Test {
     IERC20 public wbtc;
     IUSDLemma public usdl;
     ILemmaSynth public lemmaSynth;
-    LemmaSwapV2 public lemmaSwap;
+    LemmaSwap public lemmaSwap;
     FeesAccumulator public feesAccumulator;
     IWETH9 public weth;
     IERC20 public usdc;
@@ -294,7 +294,7 @@ contract Deployment is Test {
         usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);
         lemmaSynth = ILemmaSynth(testnet_optimism_kovan.LemmaSynthEth);
 
-        lemmaSwap = new LemmaSwapV2(address(usdl), address(weth), admin);
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth), admin);
         lemmaSwap.grantRole(OWNER_ROLE, address(this));
 
         if (chainId == 69) {
@@ -321,7 +321,7 @@ contract Deployment is Test {
         );
         feesAccumulator.setCollateralToDexIndexForUsdl(
             testnet_optimism_kovan.WBTC,
-            1
+            0
         );
 
         feesAccumulator.setCollateralToSynth(

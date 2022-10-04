@@ -2,25 +2,36 @@
 pragma solidity 0.8.14;
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
-contract LemmaSwap is AccessControl {
+contract LemmaSwap is AccessControl, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
+    // feesAccumulator, where all fees accumulate from tokenIn and tokenOut
     address public feesAccumulator;
+    // Weth erc20 token
     IWETH9 public weth;
+    // usdl erc20 token
     IUSDLemma public usdl;
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
+    
+    // for all the perp collaterals, we set 0 in usdl contracts
+    // so it is fixed(dexIndex = 0)
+    uint256 public dexIndex = 0;
 
     // Assumption: there is 1:1 collateral token to dexIndex relationship
     mapping(address => uint8) public collateralToDexIndex;
 
+    /// @param _usdl usdLemma contract address
+    /// @param _weth Weth erc20 contract address
+    /// @param _feesAccumulator contract address, where all fees accumulate from tokenIn and tokenOut
     constructor(
         address _usdl,
         address _weth,
@@ -37,33 +48,73 @@ contract LemmaSwap is AccessControl {
         lemmaSwapFees = 1000;
     }
 
+    // Events
     event NewUSDL(address);
+    event NewFeesAccumulator(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
 
+    /**
+        @notice Check collateral is not zero address
+    */
     modifier validCollateral(address collateral) {
         require(collateral != address(0), "!collateral");
         _;
     }
 
+    /**
+        @notice Check fees is not le to 1e6
+    */
     modifier validFees(uint256 fees) {
         require(fees <= 1e6, "!fees");
         _;
     }
 
+    /**
+        @notice Check deadline is not pass
+    */
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "!trade expired");
         _;
     }
 
+    /**
+        @notice fallback function
+    */
     receive() external payable {
         assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
     }
 
+    /**
+        @notice rescueFunds function will take all the unnecessary funds to safe address 
+    */
+    function rescueFunds(address token, uint256 amount)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        TransferHelper.safeTransfer(token, msg.sender, amount);
+    }
+
+    /**
+        @notice setUSDL set address of usdLemma contract address 
+    */
     function setUSDL(address _usdl) external onlyRole(OWNER_ROLE) {
         require(_usdl != address(0), "! address");
         usdl = IUSDLemma(_usdl);
         emit NewUSDL(address(usdl));
+    }
+
+    /**
+        @notice setFeeAccumulator set address 
+        where all the tokenIn and tokenOut fees will accumulate 
+    */
+    function setFeeAccumulator(address _feesAccumulator)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        require(_feesAccumulator != address(0), "! address");
+        feesAccumulator = _feesAccumulator;
+        emit NewFeesAccumulator(_feesAccumulator);
     }
 
     /**
@@ -130,13 +181,16 @@ contract LemmaSwap is AccessControl {
         return (amount * getProtocolFeesCoeffTokenOut()) / 1e6;
     }
 
+    /**
+        @notice getAdjustedOutputAmount will compute output ampunt after fees
+     */
     function getAdjustedOutputAmount(address token, uint256 amount)
         external
         view
         returns (uint256)
     {
-        uint256 dexIndex = _convertCollateralToValidDexIndex(token);
-        uint256 redeemFees = usdl.getFees(dexIndex, token, false);
+        uint256 _dexIndex = _convertCollateralToValidDexIndex(token);
+        uint256 redeemFees = usdl.getFees(_dexIndex, token, false);
         return (amount * 1e6) / (1e6 - redeemFees);
     }
 
@@ -172,7 +226,7 @@ contract LemmaSwap is AccessControl {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external ensure(deadline) returns (uint256[] memory amounts) {
+    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
@@ -200,7 +254,7 @@ contract LemmaSwap is AccessControl {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external payable ensure(deadline) returns (uint256[] memory amounts) {
+    ) external payable nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
@@ -231,7 +285,7 @@ contract LemmaSwap is AccessControl {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external ensure(deadline) returns (uint256[] memory amounts) {
+    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[1] == address(weth), "! Invalid path");
         amounts = new uint256[](path.length);
@@ -266,16 +320,6 @@ contract LemmaSwap is AccessControl {
             "Collateral not supported"
         );
         return collateralToDexIndex[collateral] - 1;
-    }
-
-    function _returnAllTokens(IERC20Decimals token, address to) internal {
-        if (token.balanceOf(address(this)) > 0) {
-            TransferHelper.safeTransfer(
-                address(token),
-                to,
-                token.balanceOf(address(this))
-            );
-        }
     }
 
     /// @notice _swapWithExactInput internal method to swap tokenIn -> tokenOut
@@ -348,7 +392,7 @@ contract LemmaSwap is AccessControl {
         );
         TransferHelper.safeTransfer(
             tokenOut,
-            usdl.lemmaTreasury(),
+            feesAccumulator,
             protocolFeesOut
         );
         uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(
@@ -359,11 +403,12 @@ contract LemmaSwap is AccessControl {
             "! netCollateralToGetBack"
         );
         TransferHelper.safeTransfer(tokenOut, to, netCollateralToGetBack);
-        _returnAllTokens(IERC20Decimals(address(usdl)), to);
-        _returnAllTokens(IERC20Decimals(tokenIn), to);
         return netCollateralToGetBack;
     }
 
+    /**
+        @notice convertIn18_decimals convert amount tokenDecimals to 1e18 decimals
+    */
     function convertIn18_decimals(IERC20Decimals token, uint256 amount)
         internal
         view
@@ -373,6 +418,9 @@ contract LemmaSwap is AccessControl {
         return ((amount * 1e18) / (10**tokenDecimal));
     }
 
+    /**
+        @notice convertInToken_decimals convert amount 1e18 decimals to tokenDecimals
+    */
     function convertInToken_decimals(IERC20Decimals token, uint256 amount)
         internal
         view
