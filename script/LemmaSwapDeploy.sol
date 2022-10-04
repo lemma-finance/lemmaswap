@@ -66,29 +66,29 @@ contract LemmaSwapDeployTestnet is Script {
 
         usdLemma.grantRole(LEMMA_SWAP, address(lemmaSwap));
 
-        feesAccumulator = new FeesAccumulator(
-            lemmaPerpAddresses.c_optimismKovanUniV3Router,
-            IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
-        );
+        // feesAccumulator = new FeesAccumulator(
+        //     lemmaPerpAddresses.c_optimismKovanUniV3Router,
+        //     IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
+        // );
 
-        feesAccumulator.setCollateralToDexIndexForUsdl(
-            lemmaPerpAddresses.g_usdlCollateralWeth,
-            0
-        );
-        feesAccumulator.setCollateralToDexIndexForUsdl(
-            lemmaPerpAddresses.f_usdlCollateralWbtc,
-            0
-        );
-        feesAccumulator.setCollateralToSynth(
-            lemmaPerpAddresses.g_usdlCollateralWeth,
-            lemmaPerpAddresses.b_LemmaSynthEth,
-            lemmaPerpAddresses.j_xLemmaSynthEth
-        );
-        feesAccumulator.setCollateralToSynth(
-            lemmaPerpAddresses.f_usdlCollateralWbtc,
-            lemmaPerpAddresses.a_LemmaSynthBtc,
-            lemmaPerpAddresses.i_xLemmaSynthBtc
-        );
+        // feesAccumulator.setCollateralToDexIndexForUsdl(
+        //     lemmaPerpAddresses.g_usdlCollateralWeth,
+        //     0
+        // );
+        // feesAccumulator.setCollateralToDexIndexForUsdl(
+        //     lemmaPerpAddresses.f_usdlCollateralWbtc,
+        //     0
+        // );
+        // feesAccumulator.setCollateralToSynth(
+        //     lemmaPerpAddresses.g_usdlCollateralWeth,
+        //     lemmaPerpAddresses.b_LemmaSynthEth,
+        //     lemmaPerpAddresses.j_xLemmaSynthEth
+        // );
+        // feesAccumulator.setCollateralToSynth(
+        //     lemmaPerpAddresses.f_usdlCollateralWbtc,
+        //     lemmaPerpAddresses.a_LemmaSynthBtc,
+        //     lemmaPerpAddresses.i_xLemmaSynthBtc
+        // );
         vm.stopBroadcast();
     }
 }

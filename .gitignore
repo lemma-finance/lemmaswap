@@ -7,3 +7,5 @@ test_on_kovan_alchemy.sh
 node_modules
 
 broadcast/LemmaSwapDeployTestnet.sol/69
+
+deployment-data.log 
