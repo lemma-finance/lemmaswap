@@ -21,7 +21,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
 
     // Fees in 1e6 format: 1e6 is 100%
     uint256 public lemmaSwapFees;
-    
+
     // for all the perp collaterals, we set 0 in usdl contracts
     // so it is fixed(dexIndex = 0)
     uint256 public dexIndex = 0;
@@ -226,7 +226,12 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
@@ -254,7 +259,13 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external payable nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        payable
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
@@ -285,7 +296,12 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[1] == address(weth), "! Invalid path");
         amounts = new uint256[](path.length);
@@ -390,11 +406,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
             tokenOut,
             IERC20Decimals(tokenOut).balanceOf(address(this))
         );
-        TransferHelper.safeTransfer(
-            tokenOut,
-            feesAccumulator,
-            protocolFeesOut
-        );
+        TransferHelper.safeTransfer(tokenOut, feesAccumulator, protocolFeesOut);
         uint256 netCollateralToGetBack = IERC20Decimals(tokenOut).balanceOf(
             address(this)
         );

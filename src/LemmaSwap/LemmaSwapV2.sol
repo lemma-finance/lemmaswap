@@ -251,7 +251,12 @@ contract LemmaSwapV2 is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         amounts = new uint256[](path.length);
         amounts[0] = amountIn;
@@ -279,7 +284,13 @@ contract LemmaSwapV2 is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external payable nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        payable
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[0] == address(weth), "! Invalid path");
         weth.deposit{value: msg.value}();
@@ -310,7 +321,12 @@ contract LemmaSwapV2 is AccessControl, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external nonReentrant ensure(deadline) returns (uint256[] memory amounts) {
+    )
+        external
+        nonReentrant
+        ensure(deadline)
+        returns (uint256[] memory amounts)
+    {
         require(path.length == 2, "! Multi-hop swap not supported yet");
         require(path[1] == address(weth), "! Invalid path");
         amounts = new uint256[](path.length);
