@@ -8,6 +8,8 @@ import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
+/// @author Lemma Finance
+/// @notice LemmaSwap contract to execute spot trades using futures’ liquidity
 contract LemmaSwap is AccessControl, ReentrancyGuard {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");

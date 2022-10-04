@@ -26,6 +26,7 @@ contract LemmaSwapDeployTestnet is Script {
         address i_xLemmaSynthBtc;
         address j_xLemmaSynthEth;
         address k_xUSDLAddress;
+        address l_feeAccumulator;
     }
 
     IUSDLemma usdLemma;
@@ -51,9 +52,13 @@ contract LemmaSwapDeployTestnet is Script {
         lemmaSwap = new LemmaSwap(
             lemmaPerpAddresses.h_usdLemmaAddress,
             lemmaPerpAddresses.g_usdlCollateralWeth,
-            msg.sender
+            lemmaPerpAddresses.l_feeAccumulator
         );
         console.log("lemmaSwap: ", address(lemmaSwap));
+
+        lemmaSwap = LemmaSwap(
+            payable(0x29E8dd7383aCC9Ac316DFc9055C177Fe748A0bE5)
+        );
 
         lemmaSwap.setCollateralToDexIndex(
             lemmaPerpAddresses.g_usdlCollateralWeth,
@@ -66,29 +71,29 @@ contract LemmaSwapDeployTestnet is Script {
 
         usdLemma.grantRole(LEMMA_SWAP, address(lemmaSwap));
 
-        // feesAccumulator = new FeesAccumulator(
-        //     lemmaPerpAddresses.c_optimismKovanUniV3Router,
-        //     IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
-        // );
+        feesAccumulator = new FeesAccumulator(
+            lemmaPerpAddresses.c_optimismKovanUniV3Router,
+            IXUSDL(lemmaPerpAddresses.k_xUSDLAddress)
+        );
 
-        // feesAccumulator.setCollateralToDexIndexForUsdl(
-        //     lemmaPerpAddresses.g_usdlCollateralWeth,
-        //     0
-        // );
-        // feesAccumulator.setCollateralToDexIndexForUsdl(
-        //     lemmaPerpAddresses.f_usdlCollateralWbtc,
-        //     0
-        // );
-        // feesAccumulator.setCollateralToSynth(
-        //     lemmaPerpAddresses.g_usdlCollateralWeth,
-        //     lemmaPerpAddresses.b_LemmaSynthEth,
-        //     lemmaPerpAddresses.j_xLemmaSynthEth
-        // );
-        // feesAccumulator.setCollateralToSynth(
-        //     lemmaPerpAddresses.f_usdlCollateralWbtc,
-        //     lemmaPerpAddresses.a_LemmaSynthBtc,
-        //     lemmaPerpAddresses.i_xLemmaSynthBtc
-        // );
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            0
+        );
+        feesAccumulator.setCollateralToDexIndexForUsdl(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            0
+        );
+        feesAccumulator.setCollateralToSynth(
+            lemmaPerpAddresses.g_usdlCollateralWeth,
+            lemmaPerpAddresses.b_LemmaSynthEth,
+            lemmaPerpAddresses.j_xLemmaSynthEth
+        );
+        feesAccumulator.setCollateralToSynth(
+            lemmaPerpAddresses.f_usdlCollateralWbtc,
+            lemmaPerpAddresses.a_LemmaSynthBtc,
+            lemmaPerpAddresses.i_xLemmaSynthBtc
+        );
         vm.stopBroadcast();
     }
 }
