@@ -103,7 +103,7 @@ contract FeesAccumulator is AccessControl {
             IERC20(_token)
         );
 
-        uint256 synthAmount = totalBalance / 2;
+        uint256 synthAmount = totalBalance - collateralAmount;
         collateralAmount = synthAmount;
         if (_token != usdl.perpSettlementToken()) {
             address[] memory _path = new address[](2);
@@ -121,13 +121,15 @@ contract FeesAccumulator is AccessControl {
                 _swapMinAmount
             );
         }
-        collateralAmount = (collateralAmount * 1e18) / (10**decimals);
 
         SynthAddresses memory _sa = synthMapping[_token];
         IERC20Decimals(IERC20Decimals(usdl.perpSettlementToken())).approve(
             _sa.synthAddress,
             collateralAmount
         );
+
+        collateralAmount = (collateralAmount * 1e18) / (10**decimals);
+
         ILemmaSynth(_sa.synthAddress).depositToWExactCollateral(
             address(_sa.xSynthAddress),
             collateralAmount,
