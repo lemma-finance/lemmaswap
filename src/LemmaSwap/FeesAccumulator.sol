@@ -103,7 +103,7 @@ contract FeesAccumulator is AccessControl {
             IERC20(_token)
         );
 
-        uint256 synthAmount = totalBalance - collateralAmount;
+        uint256 synthAmount = totalBalance - (totalBalance / 2);
         collateralAmount = synthAmount;
         if (_token != usdl.perpSettlementToken()) {
             address[] memory _path = new address[](2);
