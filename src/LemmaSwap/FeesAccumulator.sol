@@ -50,10 +50,12 @@ contract FeesAccumulator is AccessControl {
         router = _router;
     }
 
+    ///@notice setFeeTransfererRole will assign FEES_TRANSFER_ROLE to _feeTransferer address
     function setFeeTransfererRole(address _feeTransferer)
         external
         onlyRole(OWNER_ROLE)
     {
+        require(_feeTransferer != address(0), "!zero address");
         grantRole(FEES_TRANSFER_ROLE, _feeTransferer);
     }
 
@@ -89,6 +91,7 @@ contract FeesAccumulator is AccessControl {
 
     /// @notice distibuteFees function will distribute fees of any token between xUsdl and xLemmaSynth contract address
     /// @param _token erc20 tokenAddress to tranfer as a gees betwwn xUsdl and xLemmaSynth
+    /// @param _swapData swap data to do the actual swap
     function distibuteFees(address _token, bytes calldata _swapData)
         external
         onlyRole(FEES_TRANSFER_ROLE)
@@ -173,6 +176,5 @@ contract FeesAccumulator is AccessControl {
             address(this)
         );
         res = uint256(int256(balanceAfter) - int256(balanceBefore));
-        return res;
     }
 }
