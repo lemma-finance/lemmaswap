@@ -281,47 +281,47 @@ contract ContractTest is Test {
         // );
     }
 
-    function testDistributeFeesForEth() public noAsstesLeft {
-        testSetupForSwap();
-        d.askForMoney(address(d.weth()), 1e12);
-        d.askForMoney(address(d.wbtc()), 1e6);
+    // function testDistributeFeesForEth() public noAsstesLeft {
+    //     testSetupForSwap();
+    //     d.askForMoney(address(d.weth()), 1e12);
+    //     d.askForMoney(address(d.wbtc()), 1e6);
 
-        d.weth().transfer(address(d.feesAccumulator()), 1e12);
-        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+    //     d.weth().transfer(address(d.feesAccumulator()), 1e12);
+    //     d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
 
-        d.mockUniV3Router().setRouter(address(0));
-        d.mockUniV3Router().setNextSwapAmount(1e9);
+    //     d.mockUniV3Router().setRouter(address(0));
+    //     d.mockUniV3Router().setNextSwapAmount(1e9);
 
-        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
-        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
-    }
+    //     uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+    //     uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+    //         .balanceOf(d.getAddresses().xLemmaSynthEth);
+    //     d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
+    //     uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+    //     uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+    //         .balanceOf(d.getAddresses().xLemmaSynthEth);
+    //     assertGt(balUsdlAfter, balUsdlBefore);
+    //     assertGt(balSynthAfter, balSynthBefore);
+    // }
 
-    function testDistributeFeesForBtc() public noAsstesLeft {
-        testSetupForSwap();
-        d.askForMoney(address(d.weth()), 1e12);
-        d.askForMoney(address(d.wbtc()), 1e6);
+    // function testDistributeFeesForBtc() public noAsstesLeft {
+    //     testSetupForSwap();
+    //     d.askForMoney(address(d.weth()), 1e12);
+    //     d.askForMoney(address(d.wbtc()), 1e6);
 
-        d.weth().transfer(address(d.feesAccumulator()), 1e12);
-        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+    //     d.weth().transfer(address(d.feesAccumulator()), 1e12);
+    //     d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
 
-        d.mockUniV3Router().setRouter(address(0));
-        d.mockUniV3Router().setNextSwapAmount(1e9);
+    //     d.mockUniV3Router().setRouter(address(0));
+    //     d.mockUniV3Router().setNextSwapAmount(1e9);
 
-        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
-        d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
-        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
-        assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
-    }
+    //     uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+    //     uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
+    //         .balanceOf(d.getAddresses().xLemmaSynthBtc);
+    //     d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
+    //     uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+    //     uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
+    //         .balanceOf(d.getAddresses().xLemmaSynthBtc);
+    //     assertGt(balUsdlAfter, balUsdlBefore);
+    //     assertGt(balSynthAfter, balSynthBefore);
+    // }
 }

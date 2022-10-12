@@ -39,7 +39,7 @@ contract FeesAccumulator is AccessControl {
         xusdl = _xusdl;
         usdl = IUSDLemma(address(xusdl.usdl()));
         _setRoleAdmin(OWNER_ROLE, ADMIN_ROLE);
-        _setRoleAdmin(FEES_TRANSFER_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(FEES_TRANSFER_ROLE, OWNER_ROLE);
         _setupRole(ADMIN_ROLE, msg.sender);
         grantRole(OWNER_ROLE, msg.sender);
     }
@@ -48,6 +48,13 @@ contract FeesAccumulator is AccessControl {
     function setRouter(address _router) external onlyRole(OWNER_ROLE) {
         require(_router != address(0), "!_router");
         router = _router;
+    }
+
+    function setFeeTransfererRole(address _feeTransferer)
+        external
+        onlyRole(OWNER_ROLE)
+    {
+        grantRole(FEES_TRANSFER_ROLE, _feeTransferer);
     }
 
     /// @notice Updates the Collateral --> dexIndex association as per USDLemma Contract
@@ -82,13 +89,10 @@ contract FeesAccumulator is AccessControl {
 
     /// @notice distibuteFees function will distribute fees of any token between xUsdl and xLemmaSynth contract address
     /// @param _token erc20 tokenAddress to tranfer as a gees betwwn xUsdl and xLemmaSynth
-    /// @param _swapFee is a feeTier(e.g. 3000) will use to swap _token to USDC
-    /// @param _swapMinAmount minAmount need to get if swap happens
-    function distibuteFees(
-        address _token,
-        uint24 _swapFee,
-        uint256 _swapMinAmount
-    ) external onlyRole(FEES_TRANSFER_ROLE) {
+    function distibuteFees(address _token, bytes calldata _swapData)
+        external
+        onlyRole(FEES_TRANSFER_ROLE)
+    {
         uint256 totalBalance = IERC20Decimals(_token).balanceOf(address(this));
         uint256 decimals = IERC20Decimals(_token).decimals();
         require(totalBalance > 0, "!totalBalance");
@@ -102,28 +106,20 @@ contract FeesAccumulator is AccessControl {
             0,
             IERC20(_token)
         );
-
+        address settlmentToken = usdl.perpSettlementToken();
         uint256 synthAmount = totalBalance - (totalBalance / 2);
         collateralAmount = synthAmount;
-        if (_token != usdl.perpSettlementToken()) {
-            address[] memory _path = new address[](2);
-            _path[0] = _token;
-            _path[1] = usdl.perpSettlementToken();
+        if (_token != settlmentToken) {
+            address _tokenOut = settlmentToken;
 
-            decimals = IERC20Decimals(usdl.perpSettlementToken()).decimals();
+            decimals = IERC20Decimals(settlmentToken).decimals();
             IERC20Decimals(_token).approve(router, synthAmount);
 
-            collateralAmount = _swapOnUniV3(
-                router,
-                _path,
-                synthAmount,
-                _swapFee,
-                _swapMinAmount
-            );
+            collateralAmount = _swap(router, _tokenOut, _swapData);
         }
 
         SynthAddresses memory _sa = synthMapping[_token];
-        IERC20Decimals(IERC20Decimals(usdl.perpSettlementToken())).approve(
+        IERC20Decimals(IERC20Decimals(settlmentToken)).approve(
             _sa.synthAddress,
             collateralAmount
         );
@@ -135,7 +131,7 @@ contract FeesAccumulator is AccessControl {
             collateralAmount,
             0,
             0,
-            IERC20(usdl.perpSettlementToken())
+            IERC20(settlmentToken)
         );
     }
 
@@ -164,33 +160,19 @@ contract FeesAccumulator is AccessControl {
     }
 
     /// @dev Helper function to swap on UniV3
-    function _swapOnUniV3(
+    function _swap(
         address _router,
-        address[] memory path,
-        uint256 amount,
-        uint24 _swapFee,
-        uint256 _swapMinAmount
-    ) internal returns (uint256) {
-        uint256 res;
-        IERC20Decimals(path[0]).approve(_router, type(uint256).max);
-        ISwapRouter.ExactInputSingleParams memory params = ISwapRouter
-            .ExactInputSingleParams({
-                tokenIn: path[0],
-                tokenOut: path[1],
-                fee: _swapFee,
-                recipient: address(this),
-                deadline: type(uint256).max,
-                amountIn: amount,
-                amountOutMinimum: _swapMinAmount,
-                sqrtPriceLimitX96: 0
-            });
-        uint256 balanceBefore = IERC20Decimals(path[1]).balanceOf(
+        address _tokenOut,
+        bytes calldata _swapData
+    ) internal returns (uint256 res) {
+        uint256 balanceBefore = IERC20Decimals(_tokenOut).balanceOf(
             address(this)
         );
-        res = ISwapRouter(_router).exactInputSingle(params);
-        uint256 balanceAfter = IERC20Decimals(path[1]).balanceOf(address(this));
+        _router.call(_swapData);
+        uint256 balanceAfter = IERC20Decimals(_tokenOut).balanceOf(
+            address(this)
+        );
         res = uint256(int256(balanceAfter) - int256(balanceBefore));
-        IERC20Decimals(path[0]).approve(_router, 0);
         return res;
     }
 }
