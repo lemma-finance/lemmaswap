@@ -315,9 +315,25 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         }
 
         if (tokenIn == address(usdl)) {
-            whenTokenInIsUSDL(tokenOut, amountIn18Decimals, amountOutMin);
+            // it simply burn usdl
+            // and withdraw collateral for user using withdrawTo method
+            usdl.withdrawTo(
+                address(this),
+                amountIn18Decimals,
+                _convertCollateralToValidDexIndex(tokenOut),
+                amountOutMin,
+                IERC20(tokenOut)
+            );
         } else if (tokenOut == address(usdl)) {
-            whenTokenOutIsUSDL(tokenIn, amountIn18Decimals);
+            // it simply deposit collateral for user
+            // and mint usdl using depositToWExactCollateral
+            usdl.depositToWExactCollateral(
+                address(this),
+                amountIn18Decimals,
+                _convertCollateralToValidDexIndex(tokenIn),
+                0,
+                IERC20(tokenIn)
+            );
         } else {
             // mint USDL with tokenIn as collateral
             usdl.depositToWExactCollateral(
@@ -347,41 +363,6 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         if (to != address(this)) {
             TransferHelper.safeTransfer(tokenOut, to, amountOut);
         }
-    }
-
-    /**
-        @notice whenTokenInIsUSDL, 
-        it simply burn usdl and withdraw collateral for user using withdrawTo method
-    */
-    function whenTokenInIsUSDL(
-        address tokenOut,
-        uint256 usdlAmount,
-        uint256 amountOutMin
-    ) internal {
-        usdl.withdrawTo(
-            address(this),
-            usdlAmount,
-            _convertCollateralToValidDexIndex(tokenOut),
-            amountOutMin,
-            IERC20(tokenOut)
-        );
-    }
-
-    /**
-        @notice whenTokenInIsUSDL, 
-        it simply deposit collateral for user and mint usdl using depositToWExactCollateral
-    */
-    function whenTokenOutIsUSDL(
-        address tokenIn,
-        uint256 collateralAmount
-    ) internal {
-        usdl.depositToWExactCollateral(
-            address(this),
-            collateralAmount,
-            _convertCollateralToValidDexIndex(tokenIn),
-            0,
-            IERC20(tokenIn)
-        );
     }
 
     /**

@@ -210,7 +210,7 @@ contract ContractTest is Test {
             address(this),
             block.timestamp
         );
-        
+
         assertTrue(
             d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn
         );
