@@ -156,6 +156,70 @@ contract ContractTest is Test {
         TransferHelper.safeTransferETH(address(d.lemmaSwap()), 1e18);
     }
 
+    function testTokenInIsUSDL() public noAsstesLeft {
+        testSetupForSwap();
+        deal(address(d.usdl()), address(this), 10e18);
+
+        uint256 usdlInitialBalance = d.usdl().balanceOf(address(this));
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+
+        d.usdl().approve(address(d.lemmaSwap()), type(uint256).max);
+
+        address[] memory path = new address[](2);
+        path[0] = address(d.usdl());
+        path[1] = address(d.weth());
+
+        uint256 amountIn = 10e18;
+
+        uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForTokens(
+            amountIn,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        assertTrue(
+            d.usdl().balanceOf(address(this)) == usdlInitialBalance - amountIn
+        );
+        assertTrue(
+            d.weth().balanceOf(address(this)) ==
+                wethInitialBalance + amountsOut[1]
+        );
+    }
+
+    function testTokenOutIsUSDL() public noAsstesLeft {
+        testSetupForSwap();
+        deal(address(d.weth()), address(this), 1e13);
+
+        uint256 wethInitialBalance = d.weth().balanceOf(address(this));
+        uint256 usdlInitialBalance = d.usdl().balanceOf(address(this));
+
+        d.weth().approve(address(d.lemmaSwap()), type(uint256).max);
+
+        address[] memory path = new address[](2);
+        path[0] = address(d.weth());
+        path[1] = address(d.usdl());
+
+        uint256 amountIn = 1e13;
+
+        uint256[] memory amountsOut = d.lemmaSwap().swapExactTokensForTokens(
+            amountIn,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+        
+        assertTrue(
+            d.weth().balanceOf(address(this)) == wethInitialBalance - amountIn
+        );
+        assertTrue(
+            d.usdl().balanceOf(address(this)) ==
+                usdlInitialBalance + amountsOut[1]
+        );
+    }
+
     function testSwapExactTokensForTokens() public noAsstesLeft {
         testSetupForSwap();
 

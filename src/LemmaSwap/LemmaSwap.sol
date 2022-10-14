@@ -314,23 +314,29 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
             IERC20Decimals(tokenIn).approve(address(usdl), type(uint256).max);
         }
 
-        // mint USDL with tokenIn as collateral
-        usdl.depositToWExactCollateral(
-            address(this),
-            amountIn18Decimals,
-            _convertCollateralToValidDexIndex(tokenIn),
-            0,
-            IERC20(tokenIn)
-        );
-        uint256 usdlAmount = usdl.balanceOf(address(this));
-        // burn USDL getting tokenOut collateral back
-        usdl.withdrawTo(
-            address(this),
-            usdlAmount,
-            _convertCollateralToValidDexIndex(tokenOut),
-            amountOutMin,
-            IERC20(tokenOut)
-        );
+        if (tokenIn == address(usdl)) {
+            whenTokenInIsUSDL(tokenOut, amountIn18Decimals, amountOutMin);
+        } else if (tokenOut == address(usdl)) {
+            whenTokenOutIsUSDL(tokenIn, amountIn18Decimals);
+        } else {
+            // mint USDL with tokenIn as collateral
+            usdl.depositToWExactCollateral(
+                address(this),
+                amountIn18Decimals,
+                _convertCollateralToValidDexIndex(tokenIn),
+                0,
+                IERC20(tokenIn)
+            );
+            uint256 usdlAmount = usdl.balanceOf(address(this));
+            // burn USDL getting tokenOut collateral back
+            usdl.withdrawTo(
+                address(this),
+                usdlAmount,
+                _convertCollateralToValidDexIndex(tokenOut),
+                amountOutMin,
+                IERC20(tokenOut)
+            );
+        }
 
         amountOut = IERC20Decimals(tokenOut).balanceOf(address(this));
         uint256 protocolFeesOut = getProtocolFees(tokenOut, amountOut);
@@ -341,6 +347,41 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         if (to != address(this)) {
             TransferHelper.safeTransfer(tokenOut, to, amountOut);
         }
+    }
+
+    /**
+        @notice whenTokenInIsUSDL, 
+        it simply burn usdl and withdraw collateral for user using withdrawTo method
+    */
+    function whenTokenInIsUSDL(
+        address tokenOut,
+        uint256 usdlAmount,
+        uint256 amountOutMin
+    ) internal {
+        usdl.withdrawTo(
+            address(this),
+            usdlAmount,
+            _convertCollateralToValidDexIndex(tokenOut),
+            amountOutMin,
+            IERC20(tokenOut)
+        );
+    }
+
+    /**
+        @notice whenTokenInIsUSDL, 
+        it simply deposit collateral for user and mint usdl using depositToWExactCollateral
+    */
+    function whenTokenOutIsUSDL(
+        address tokenIn,
+        uint256 collateralAmount
+    ) internal {
+        usdl.depositToWExactCollateral(
+            address(this),
+            collateralAmount,
+            _convertCollateralToValidDexIndex(tokenIn),
+            0,
+            IERC20(tokenIn)
+        );
     }
 
     /**
