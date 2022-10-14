@@ -378,18 +378,6 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
     }
 
     /**
-        @notice convertInToken_decimals convert amount 1e18 decimals to tokenDecimals
-    */
-    function convertInToken_decimals(IERC20Decimals token, uint256 amount)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 tokenDecimal = token.decimals();
-        return ((amount * (10**tokenDecimal)) / 1e18);
-    }
-
-    /**
         @notice rescueFunds function will take all the unnecessary funds to safe address 
     */
     function rescueFunds(address token, uint256 amount)
