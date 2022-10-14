@@ -4,13 +4,13 @@ pragma solidity 0.8.14;
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IWETH9} from "../src/interfaces/IWETH9.sol";
-import {IUSDLemma} from "./interfaces/IUSDLemma.sol";
-import {ILemmaSynth} from "./interfaces/ILemmaSynth.sol";
-import {IXUSDL} from "./interfaces/IXUSDL.sol";
-import {ISwapRouter} from "./interfaces/ISwapRouter.sol";
-import {LemmaSwapV2} from "./LemmaSwap/LemmaSwapV2.sol";
-import {FeesAccumulator} from "./LemmaSwap/FeesAccumulator.sol";
+import {IWETH9} from "../interfaces/IWETH9.sol";
+import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
+import {IXUSDL} from "../interfaces/IXUSDL.sol";
+import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
+import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
+import {FeesAccumulator} from "../LemmaSwap/FeesAccumulator.sol";
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 
@@ -155,10 +155,11 @@ contract MockUniV3Router {
 
 contract Deployment is Test {
     using stdJson for string;
+
     IERC20 public wbtc;
     IUSDLemma public usdl;
     ILemmaSynth public lemmaSynth;
-    LemmaSwapV2 public lemmaSwap;
+    LemmaSwap public lemmaSwap;
     FeesAccumulator public feesAccumulator;
     IWETH9 public weth;
     IERC20 public usdc;
@@ -294,7 +295,7 @@ contract Deployment is Test {
         usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);
         lemmaSynth = ILemmaSynth(testnet_optimism_kovan.LemmaSynthEth);
 
-        lemmaSwap = new LemmaSwapV2(address(usdl), address(weth), admin);
+        lemmaSwap = new LemmaSwap(address(usdl), address(weth), admin);
         lemmaSwap.grantRole(OWNER_ROLE, address(this));
 
         if (chainId == 69) {

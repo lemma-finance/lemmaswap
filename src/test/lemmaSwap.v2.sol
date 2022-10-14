@@ -5,7 +5,7 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
-import {Deployment, Collateral} from "../Contract_LV2.sol";
+import {Deployment, Collateral} from "./Contract_LV2.sol";
 import {IPerpVault} from "../interfaces/IPerpVault.sol";
 import "forge-std/Test.sol";
 
