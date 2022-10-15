@@ -5,7 +5,7 @@ import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/Transfer
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
-import {Deployment, Collateral} from "./Contract_LV1.sol";
+import {Deployment, Collateral, MockSwapRouter} from "./Contract_LV1.sol";
 import {IPerpVault} from "../interfaces/IPerpVault.sol";
 import "forge-std/Test.sol";
 
@@ -345,47 +345,52 @@ contract ContractTest is Test {
         // );
     }
 
-    // function testDistributeFeesForEth() public noAsstesLeft {
-    //     testSetupForSwap();
-    //     d.askForMoney(address(d.weth()), 1e12);
-    //     d.askForMoney(address(d.wbtc()), 1e6);
+    function testDistributeFeesForEth() public noAsstesLeft {
+        testSetupForSwap();
 
-    //     d.weth().transfer(address(d.feesAccumulator()), 1e12);
-    //     d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+        d.askForMoney(address(d.weth()), 1e18);
+        deal(address(d.usdc()), address(this), 10e6);
 
-    //     d.mockUniV3Router().setRouter(address(0));
-    //     d.mockUniV3Router().setNextSwapAmount(1e9);
+        d.weth().transfer(address(d.feesAccumulator()), 1e18);
 
-    //     uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-    //     uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-    //         .balanceOf(d.getAddresses().xLemmaSynthEth);
-    //     d.feesAccumulator().distibuteFees(address(d.weth()), 3000, 0);
-    //     uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-    //     uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-    //         .balanceOf(d.getAddresses().xLemmaSynthEth);
-    //     assertGt(balUsdlAfter, balUsdlBefore);
-    //     assertGt(balSynthAfter, balSynthBefore);
-    // }
+        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+            .balanceOf(d.getAddresses().xLemmaSynthEth);
+        d.feesAccumulator().distibuteFees(
+            address(d.weth()),
+            abi.encodeCall(
+                MockSwapRouter.swap,
+                (address(d.usdc()), address(d.feesAccumulator()), 10e6)
+            )
+        );
+        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+            .balanceOf(d.getAddresses().xLemmaSynthEth);
+        assertGt(balUsdlAfter, balUsdlBefore);
+        assertGt(balSynthAfter, balSynthBefore);
+    }
 
-    // function testDistributeFeesForBtc() public noAsstesLeft {
-    //     testSetupForSwap();
-    //     d.askForMoney(address(d.weth()), 1e12);
-    //     d.askForMoney(address(d.wbtc()), 1e6);
+    function testDistributeFeesForBtc() public noAsstesLeft {
+        testSetupForSwap();
+        d.askForMoney(address(d.wbtc()), 1e6);
+        deal(address(d.usdc()), address(this), 10e6);
 
-    //     d.weth().transfer(address(d.feesAccumulator()), 1e12);
-    //     d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+        d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
 
-    //     d.mockUniV3Router().setRouter(address(0));
-    //     d.mockUniV3Router().setNextSwapAmount(1e9);
-
-    //     uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-    //     uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-    //         .balanceOf(d.getAddresses().xLemmaSynthBtc);
-    //     d.feesAccumulator().distibuteFees(address(d.wbtc()), 3000, 0);
-    //     uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-    //     uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-    //         .balanceOf(d.getAddresses().xLemmaSynthBtc);
-    //     assertGt(balUsdlAfter, balUsdlBefore);
-    //     assertGt(balSynthAfter, balSynthBefore);
-    // }
+        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
+            .balanceOf(d.getAddresses().xLemmaSynthBtc);
+        d.feesAccumulator().distibuteFees(
+            address(d.wbtc()),
+            abi.encodeCall(
+                MockSwapRouter.swap,
+                (address(d.usdc()), address(d.feesAccumulator()), 10e6)
+            )
+        );
+        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
+            .balanceOf(d.getAddresses().xLemmaSynthBtc);
+        assertGt(balUsdlAfter, balUsdlBefore);
+        assertGt(balSynthAfter, balSynthBefore);
+    }
 }

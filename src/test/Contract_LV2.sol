@@ -34,6 +34,17 @@ contract Bank is Test {
     }
 }
 
+contract MockSwapRouter is Test {
+    function swap(
+        address token,
+        address to,
+        uint256 amount
+    ) public returns (uint256) {
+        deal(token, to, amount);
+        return amount;
+    }
+}
+
 contract MockUniV3Router {
     ISwapRouter public router;
     uint256 public nextAmount;
@@ -163,6 +174,7 @@ contract Deployment is Test {
     IWETH9 public weth;
     IERC20 public usdc;
     MockUniV3Router public mockUniV3Router;
+    MockSwapRouter public mockSwapRouter;
     address public admin;
 
     bytes32 public constant LEMMA_SWAP = keccak256("LEMMA_SWAP");
@@ -247,6 +259,7 @@ contract Deployment is Test {
         accountBalance = perpAddresses.b_accountBalance;
         routerUniV3 = ISwapRouter(lemmaAddresses.c_optimismKovanUniV3Router); // UniV3Router mainnet optimism - 0xE592427A0AEce92De3Edee1F18E0157C05861564
         mockUniV3Router = new MockUniV3Router(bank, address(routerUniV3));
+        mockSwapRouter = new MockSwapRouter();
         admin = perpAddresses.c_admin;
         // https://github.com/lemma-finance/scripts/blob/312f7c9f45186610e98396693c81a26ead9e0a6e/config.json#L45
         testnet_optimism_kovan.WETH = address(
@@ -310,7 +323,7 @@ contract Deployment is Test {
         vm.stopPrank();
 
         feesAccumulator = new FeesAccumulator(
-            address(mockUniV3Router),
+            address(mockSwapRouter),
             IXUSDL(testnet_optimism_kovan.xusdl)
         );
         feesAccumulator.grantRole(OWNER_ROLE, address(this));
