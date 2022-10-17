@@ -315,8 +315,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         }
 
         if (tokenIn == address(usdl)) {
-            // it simply burn usdl
-            // and withdraw collateral for user using withdrawTo method
+            // burn USDL getting tokenOut collateral back
             usdl.withdrawTo(
                 address(this),
                 amountIn18Decimals,
@@ -325,8 +324,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
                 IERC20(tokenOut)
             );
         } else if (tokenOut == address(usdl)) {
-            // it simply deposit collateral for user
-            // and mint usdl using depositToWExactCollateral
+            // mint USDL with tokenIn as collateral
             usdl.depositToWExactCollateral(
                 address(this),
                 amountIn18Decimals,

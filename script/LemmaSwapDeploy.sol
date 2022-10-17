@@ -56,9 +56,9 @@ contract LemmaSwapDeployTestnet is Script {
         );
         console.log("lemmaSwap: ", address(lemmaSwap));
 
-        lemmaSwap = LemmaSwap(
-            payable(0x29E8dd7383aCC9Ac316DFc9055C177Fe748A0bE5)
-        );
+        // lemmaSwap = LemmaSwap(
+        //     payable(0x6B283Cbcd24fdF67E1C4E23d28815C2607eEfE29)
+        // );
 
         lemmaSwap.setCollateralToDexIndex(
             lemmaPerpAddresses.g_usdlCollateralWeth,
