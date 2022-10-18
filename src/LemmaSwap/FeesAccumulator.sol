@@ -97,6 +97,10 @@ contract FeesAccumulator is AccessControl {
         onlyRole(FEES_TRANSFER_ROLE)
     {
         uint256 totalBalance = IERC20Decimals(_token).balanceOf(address(this));
+        if (_token == address(usdl)) {
+            usdl.transfer(address(xusdl), totalBalance);
+            return;
+        }
         uint256 decimals = IERC20Decimals(_token).decimals();
         require(totalBalance > 0, "!totalBalance");
         IERC20Decimals(_token).approve(address(usdl), totalBalance / 2);
