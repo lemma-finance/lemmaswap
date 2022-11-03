@@ -7,6 +7,8 @@ import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 import {Deployment, Collateral, MockSwapRouter} from "./Contract_LV1.sol";
 import {IPerpVault} from "../interfaces/IPerpVault.sol";
+import "../interfaces/IXUSDL.sol";
+import "../interfaces/IXLemmaSynth.sol";
 import "forge-std/Test.sol";
 
 interface IPerpLemma {
@@ -78,6 +80,46 @@ contract ContractTest is Test {
         vm.startPrank(address(d));
         d.feesAccumulator().grantRole(FEES_TRANSFER_ROLE, address(this));
         vm.stopPrank();
+    }
+
+    function _getMoneyForTo(address to, address token, uint256 amount) internal {
+        d.bank().giveMoney(token, to, amount);
+        assertTrue(IERC20Decimals(token).balanceOf(to) >= amount);
+    }
+
+    function _mintUSDLWExactCollateralNoChecks(address to, address collateral, uint256 amount) internal {
+        console.log("[_mintUSDLWExactCollateralNoChecks()] Start");
+        address usdl = address(d.usdl());
+        _getMoneyForTo(to, collateral, amount);
+        uint256 beforeBalanceUSDL = IERC20Decimals(usdl).balanceOf(to);
+        uint256 beforeBalanceCollateral = IERC20Decimals(collateral).balanceOf(to);
+        IERC20Decimals(collateral).approve(usdl, type(uint256).max);
+        // uint256 beforeTotalUsdl = d.pl().mintedPositionUsdlForThisWrapper();
+        // 4th param is minUSDLToMint which is need to be set using callStatic, currently set 0 for not breaking revert
+        // calsstatic is not possible in solidity so
+        d.usdl().depositToWExactCollateral(to, amount, 0, 0, IERC20Decimals(collateral));
+        console.log("[_mintUSDLWExactCollateralNoChecks()] End");
+        // uint256 afterTotalUsdl = d.pl().mintedPositionUsdlForThisWrapper();
+        // uint256 afterBalanceUSDL = IERC20Decimals(usdl).balanceOf(to);
+        // uint256 afterBalanceCollateral = IERC20Decimals(collateral).balanceOf(to);
+    }
+
+    function _mintUSDLWExactUSDLNoChecks(address to, address collateral, uint256 amount, uint256 dexIndex) internal {
+        address usdl = address(d.usdl());
+        _getMoneyForTo(to, collateral, amount);
+        uint256 beforeBalanceUSDL = IERC20Decimals(usdl).balanceOf(to);
+        uint256 beforeBalanceCollateral = IERC20Decimals(collateral).balanceOf(to);
+        IERC20Decimals(collateral).approve(usdl, type(uint256).max);
+        // uint256 beforeTotalUsdl = d.pl().mintedPositionUsdlForThisWrapper();
+        // 4th param is maxCollateralAmountRequired which is need to be set using callStatic, currently set uint256 max
+        // calsstatic is not possible in solidity so
+        d.usdl().depositTo(to, amount, dexIndex, type(uint256).max, IERC20Decimals(collateral));
+        // uint256 afterTotalUsdl = d.pl().mintedPositionUsdlForThisWrapper();
+        // uint256 afterBalanceUSDL = IERC20Decimals(usdl).balanceOf(to);
+        // uint256 afterBalanceCollateral = IERC20Decimals(collateral).balanceOf(to);
+        // assertEq(afterTotalUsdl - beforeTotalUsdl, afterBalanceUSDL);
+        // assertEq(afterBalanceUSDL, beforeBalanceUSDL + amount);
+        // assertTrue(afterBalanceCollateral < beforeBalanceCollateral);
     }
 
     function depositUSDC() public {
@@ -375,7 +417,23 @@ contract ContractTest is Test {
         d.askForMoney(address(d.wbtc()), 1e6);
         deal(address(d.usdc()), address(this), 10e6);
 
+        // NOTE: Adding WBTC simulating the result of fees extracted from swaps 
         d.wbtc().transfer(address(d.feesAccumulator()), 1e6);
+
+        // NOTE: Can't mint it because otherwise there would be 2 interactions withe PerpLemmaCommon.sol in the same TX and only LemmaSwap is allowed 
+        // deal(address(d.weth()), address(this), 1 ether);
+        // _mintUSDLWExactCollateralNoChecks(address(this), address(d.weth()), 1 ether);
+        deal(address(d.usdl()), address(this), 1 ether);
+
+        uint256 amountUSDL = d.usdl().balanceOf(address(this));
+        require(amountUSDL > 0, "No USDL");
+        d.usdl().approve(address(d.getAddresses().xusdl), amountUSDL);
+        IXUSDL(d.getAddresses().xusdl).deposit(amountUSDL, address(this));
+        uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
+        require(amountXUSDL > 0, "No XUSDL");
+
+        console.log("[testDistributeFeesForBtc()] xUSDL totalSupply = ", IXUSDL(d.getAddresses().xusdl).totalSupply());
+        console.log("[testDistributeFeesForBtc()] LemmaSynthBtc totalSupply = ", IXUSDL(d.getAddresses().LemmaSynthBtc).totalSupply());
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
         uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
@@ -391,6 +449,6 @@ contract ContractTest is Test {
         uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
             .balanceOf(d.getAddresses().xLemmaSynthBtc);
         assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
+        assertEq(balSynthAfter, balSynthBefore);
     }
 }

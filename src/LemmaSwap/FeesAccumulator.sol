@@ -102,7 +102,7 @@ contract FeesAccumulator is AccessControl {
 
     function convertDecimals(Amount memory x, uint8 decimals) internal pure returns(Amount memory) {
         return Amount({
-            amount: x.amount * 10**(x.decimals) / 10**decimals,
+            amount: x.amount * 10**(decimals) / 10**x.decimals,
             decimals: decimals
         });
     }
@@ -161,29 +161,44 @@ contract FeesAccumulator is AccessControl {
         console.log("[getTotalStaken()] End");
     }
 
+    function print(string memory s, Amount memory x) internal view {
+        console.log(s);
+        console.log("Amount = ", x.amount);
+        console.log("Decimals = ", x.decimals);
+    }
+
     function distributeToXUSDL(Amount memory totalBalance, Amount memory totalStaken, uint256 dexIndex, address _token) internal returns(Amount memory collateralAmountToXUSDL) {
         // NOTE: Same decimal representation
         collateralAmountToXUSDL.decimals = totalBalance.decimals;
         if(xusdl.totalSupply() > 0) {
+            console.log("[distributeToXUSDL()] totalBalance.amount = ", totalBalance.amount);
             console.log("[distributeToXUSDL()] totalBalance.decimals = ", totalBalance.decimals);
-            collateralAmountToXUSDL = mulDiv(totalBalance, Amount({
+            Amount memory xUSDLTotalSupply = Amount({
                 amount: xusdl.totalSupply(),
                 decimals: xusdl.decimals()
-            }), 
-            totalStaken);
+            }); 
+
+
+            collateralAmountToXUSDL = mulDiv(totalBalance, xUSDLTotalSupply, totalStaken);
+
+
+            console.log("[distributeToXUSDL()] collateralAmountToXUSDL.amount = ", collateralAmountToXUSDL.amount);
             console.log("[distributeToXUSDL()] collateralAmountToXUSDL.decimals = ", collateralAmountToXUSDL.decimals);
             // collateralAmountToXUSDL_nd = ((totalBalance_nd * xusdl.totalSupply())) / (totStaken_xusdlDecimals);
             // uint256 collateralAmount = ((totalBalance / 2) * 1e18) / (10**decimals);
 
             // IERC20Decimals(_token).approve(address(usdl), 0);
             IERC20Decimals(_token).approve(address(usdl), collateralAmountToXUSDL.amount);
+            uint256 amount = convertDecimals(collateralAmountToXUSDL, 18).amount;
+            console.log("T111111111 amount = ", amount);
             usdl.depositToWExactCollateral(
                 address(xusdl),
-                convertDecimals(collateralAmountToXUSDL, 18).amount,         // NOTE: This API expects 18d representation
+                amount,         // NOTE: This API expects 18d representation
                 dexIndex,
                 0,
                 IERC20(_token)
             );
+            console.log("T333333333");
         }
     }
 
