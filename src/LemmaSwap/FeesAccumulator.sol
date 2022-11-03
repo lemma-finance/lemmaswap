@@ -8,6 +8,12 @@ import {IXUSDL} from "../interfaces/IXUSDL.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {ISwapRouter} from "../interfaces/ISwapRouter.sol";
 
+import "forge-std/Test.sol";
+
+interface IUSDLemmaAdditional {
+    function getIndexPrice(uint256 dexIndex, address collateral) external view returns (uint256);
+}
+
 contract FeesAccumulator is AccessControl {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
@@ -89,6 +95,134 @@ contract FeesAccumulator is AccessControl {
         synthMapping[collateral].xSynthAddress = xLemmaSynth;
     }
 
+    struct Amount {
+        uint256 amount;
+        uint256 decimals;
+    }
+
+    function convertDecimals(Amount memory x, uint8 decimals) internal pure returns(Amount memory) {
+        return Amount({
+            amount: x.amount * 10**(x.decimals) / 10**decimals,
+            decimals: decimals
+        });
+    }
+
+    function mul(Amount memory x, Amount memory y) internal pure returns(Amount memory) {
+        return Amount({
+            amount: x.amount * y.amount / 10**(y.decimals),
+            decimals: x.decimals
+        });
+    }
+
+    function mulDiv(Amount memory x, Amount memory y, Amount memory z) internal pure returns(Amount memory) {
+        require(z.amount > 0, "No div by zero");
+        return Amount({
+            amount: (x.amount * y.amount * 10**(z.decimals)) / (z.amount * 10**(y.decimals)),
+            decimals: x.decimals
+        });
+    }
+
+    function sum(Amount memory x, Amount memory y) internal pure returns(Amount memory) {
+        require(x.decimals == y.decimals, "Different Decimal Representation");
+        return Amount({
+            amount: x.amount + y.amount,
+            decimals: x.decimals
+        });
+    }
+
+    function diff(Amount memory x, Amount memory y) internal pure returns(Amount memory) {
+        require(x.decimals == y.decimals, "Different Decimal Representation");
+        return Amount({
+            amount: x.amount - y.amount,
+            decimals: x.decimals
+        });
+    }
+
+
+    function getTotalStaken(address xsynth, uint256 dexIndex, address token) internal view returns(Amount memory totStaken) {
+        // TODO: Ideally do not assume oracle decimals is 18 but get it from a method
+        console.log("[getTotalStaken()] Start");
+        totStaken = sum(
+            Amount({
+                amount: xusdl.totalSupply(),
+                decimals: xusdl.decimals()
+                }), 
+                mul(
+                    Amount({
+                        amount: IERC20Decimals(xsynth).totalSupply(),
+                        decimals: IERC20Decimals(xsynth).decimals()
+                    }),
+                    Amount({
+                        amount: IUSDLemmaAdditional(address(usdl)).getIndexPrice(dexIndex, token),
+                        decimals: 18        // NOTE: Assuming the oracle is 18 decimals representation 
+                    })
+                )
+        );
+        console.log("[getTotalStaken()] End");
+    }
+
+    function distributeToXUSDL(Amount memory totalBalance, Amount memory totalStaken, uint256 dexIndex, address _token) internal returns(Amount memory collateralAmountToXUSDL) {
+        // NOTE: Same decimal representation
+        collateralAmountToXUSDL.decimals = totalBalance.decimals;
+        if(xusdl.totalSupply() > 0) {
+            console.log("[distributeToXUSDL()] totalBalance.decimals = ", totalBalance.decimals);
+            collateralAmountToXUSDL = mulDiv(totalBalance, Amount({
+                amount: xusdl.totalSupply(),
+                decimals: xusdl.decimals()
+            }), 
+            totalStaken);
+            console.log("[distributeToXUSDL()] collateralAmountToXUSDL.decimals = ", collateralAmountToXUSDL.decimals);
+            // collateralAmountToXUSDL_nd = ((totalBalance_nd * xusdl.totalSupply())) / (totStaken_xusdlDecimals);
+            // uint256 collateralAmount = ((totalBalance / 2) * 1e18) / (10**decimals);
+
+            // IERC20Decimals(_token).approve(address(usdl), 0);
+            IERC20Decimals(_token).approve(address(usdl), collateralAmountToXUSDL.amount);
+            usdl.depositToWExactCollateral(
+                address(xusdl),
+                convertDecimals(collateralAmountToXUSDL, 18).amount,         // NOTE: This API expects 18d representation
+                dexIndex,
+                0,
+                IERC20(_token)
+            );
+        }
+    }
+
+
+    function distributeToXSynth(Amount memory collateralAmountToXSynth, address synth, uint256 dexIndex, address _token, bytes calldata _swapData) internal {
+        if(IERC20Decimals(synth).totalSupply() > 0)
+        {
+            address settlmentToken = usdl.perpSettlementToken();
+
+            // collateralAmount = synthAmount;
+            if (_token != settlmentToken) {
+                address _tokenOut = settlmentToken;
+
+                // decimals = IERC20Decimals(settlmentToken).decimals();
+                IERC20Decimals(_token).approve(router, 0);
+                IERC20Decimals(_token).approve(router, collateralAmountToXSynth.amount);
+
+                // NOTE: New amount in Settlement Token Decimals
+                Amount memory collateralAmountToXSynth = Amount({
+                    amount: _swap(router, _tokenOut, _swapData),
+                    decimals: IERC20Decimals(settlmentToken).decimals()
+                });
+            }
+
+            // IERC20Decimals(IERC20Decimals(settlmentToken)).approve(_sa.synthAddress, 0);
+            IERC20Decimals(IERC20Decimals(settlmentToken)).approve(synth, collateralAmountToXSynth.amount);
+
+            // collateralAmount = (collateralAmount * 1e18) / (10**decimals);
+
+            ILemmaSynth(synth).depositToWExactCollateral(
+                synth,
+                convertDecimals(collateralAmountToXSynth, 18).amount,
+                0,
+                0,
+                IERC20(settlmentToken)
+            );
+        }
+    }
+
     /// @notice distibuteFees function will distribute fees of any token between xUsdl and xLemmaSynth contract address
     /// @param _token erc20 tokenAddress to tranfer as a gees betwwn xUsdl and xLemmaSynth
     /// @param _swapData swap data to do the actual swap
@@ -96,50 +230,89 @@ contract FeesAccumulator is AccessControl {
         external
         onlyRole(FEES_TRANSFER_ROLE)
     {
-        uint256 totalBalance = IERC20Decimals(_token).balanceOf(address(this));
+        Amount memory totalBalance = Amount({
+            amount: IERC20Decimals(_token).balanceOf(address(this)),
+            decimals: IERC20Decimals(_token).decimals()
+        });
+
         if (_token == address(usdl)) {
-            usdl.transfer(address(xusdl), totalBalance);
+            usdl.transfer(address(xusdl), totalBalance.amount);
             return;
         }
-        uint256 decimals = IERC20Decimals(_token).decimals();
-        require(totalBalance > 0, "!totalBalance");
-        IERC20Decimals(_token).approve(address(usdl), totalBalance / 2);
+        // uint256 decimals = IERC20Decimals(_token).decimals();
+        require(totalBalance.amount > 0, "!totalBalance");
         uint256 dexIndex = _convertCollateralToValidDexIndex(_token, true);
-        uint256 collateralAmount = ((totalBalance / 2) * 1e18) / (10**decimals);
-        usdl.depositToWExactCollateral(
-            address(xusdl),
-            collateralAmount,
-            dexIndex,
-            0,
-            IERC20(_token)
-        );
-        address settlmentToken = usdl.perpSettlementToken();
-        uint256 synthAmount = totalBalance - (totalBalance / 2);
-        collateralAmount = synthAmount;
-        if (_token != settlmentToken) {
-            address _tokenOut = settlmentToken;
 
-            decimals = IERC20Decimals(settlmentToken).decimals();
-            IERC20Decimals(_token).approve(router, synthAmount);
-
-            collateralAmount = _swap(router, _tokenOut, _swapData);
-        }
 
         SynthAddresses memory _sa = synthMapping[_token];
-        IERC20Decimals(IERC20Decimals(settlmentToken)).approve(
-            _sa.synthAddress,
-            collateralAmount
-        );
+        
+        // TODO: Ideally do not assume oracle decimals is 18 but get it from a method
+        Amount memory totalStaken = getTotalStaken(_sa.xSynthAddress, dexIndex, _token);
+        // uint256 totStaken_xusdlDecimals = xusdl.totalSupply() + (_sa.xSynthAddress.totalSupply() * IUSDLemma(usdl).getIndexPrice(dexIndex, _token) / 1e18); 
 
-        collateralAmount = (collateralAmount * 1e18) / (10**decimals);
+        Amount memory collateralAmountToXUSDL = distributeToXUSDL(totalBalance, totalStaken, dexIndex, _token);
 
-        ILemmaSynth(_sa.synthAddress).depositToWExactCollateral(
-            address(_sa.xSynthAddress),
-            collateralAmount,
-            0,
-            0,
-            IERC20(settlmentToken)
-        );
+        // if(xusdl.totalSupply() > 0) {
+        //     collateralAmountToXUSDL = mulDiv(totalBalance, Amount({
+        //         amount: xusdl.totalSupply(),
+        //         decimals: xusdl.decimals()
+        //     }), 
+        //     totStaken);
+        //     // collateralAmountToXUSDL_nd = ((totalBalance_nd * xusdl.totalSupply())) / (totStaken_xusdlDecimals);
+        //     // uint256 collateralAmount = ((totalBalance / 2) * 1e18) / (10**decimals);
+
+        //     // IERC20Decimals(_token).approve(address(usdl), 0);
+        //     IERC20Decimals(_token).approve(address(usdl), collateralAmountToXUSDL.amount);
+        //     usdl.depositToWExactCollateral(
+        //         address(xusdl),
+        //         convertDecimals(collateralAmountToXUSDL, 18).amount,         // NOTE: This API expects 18d representation
+        //         dexIndex,
+        //         0,
+        //         IERC20(_token)
+        //     );
+        // }
+
+        console.log("TotalBalance Decimals = ", totalBalance.decimals);
+        console.log("collateralAmountToXUSDL Decimals = ", collateralAmountToXUSDL.decimals);
+
+        console.log("[distibuteFees()] T1");
+        distributeToXSynth(diff(totalBalance, collateralAmountToXUSDL), _sa.xSynthAddress, dexIndex, _token, _swapData);
+        console.log("[distibuteFees()] T3");
+
+        // if(IERC20Decimals(_sa.xSynthAddress).totalSupply() > 0)
+        // {
+        //     collateralAmountToXSynth = diff(totalBalance, collateralAmountToXUSDL);
+
+        //     address settlmentToken = usdl.perpSettlementToken();
+
+        //     // collateralAmount = synthAmount;
+        //     if (_token != settlmentToken) {
+        //         address _tokenOut = settlmentToken;
+
+        //         // decimals = IERC20Decimals(settlmentToken).decimals();
+        //         IERC20Decimals(_token).approve(router, 0);
+        //         IERC20Decimals(_token).approve(router, collateralAmountToXSynth.amount);
+
+        //         // NOTE: New amount in Settlement Token Decimals
+        //         Amount memory collateralAmountToXSynth = Amount({
+        //             amount: _swap(router, _tokenOut, _swapData),
+        //             decimals: IERC20Decimals(settlmentToken).decimals()
+        //         });
+        //     }
+
+        //     // IERC20Decimals(IERC20Decimals(settlmentToken)).approve(_sa.synthAddress, 0);
+        //     IERC20Decimals(IERC20Decimals(settlmentToken)).approve(_sa.synthAddress, collateralAmountToXSynth.amount);
+
+        //     // collateralAmount = (collateralAmount * 1e18) / (10**decimals);
+
+        //     ILemmaSynth(_sa.synthAddress).depositToWExactCollateral(
+        //         _sa.xSynthAddress,
+        //         convertDecimals(collateralAmountToXSynth, 18).amount,
+        //         0,
+        //         0,
+        //         IERC20(settlmentToken)
+        //     );
+        // }
     }
 
     /// @notice Collateral --> dexIndex
@@ -179,6 +352,7 @@ contract FeesAccumulator is AccessControl {
         uint256 balanceAfter = IERC20Decimals(_tokenOut).balanceOf(
             address(this)
         );
+        require(balanceAfter >= balanceBefore, "Swap failed");
         res = uint256(int256(balanceAfter) - int256(balanceBefore));
     }
 }
