@@ -412,6 +412,46 @@ contract ContractTest is Test {
         assertGt(balSynthAfter, balSynthBefore);
     }
 
+    enum StakeAsset {
+        USDL,
+        LemmaETH
+    }
+
+    // NOTE: Introduced as a trick to have functions with named arguments which makes the code more readable  
+    struct StakeParams {
+        StakeAsset asset;
+        uint256 amount;
+        bool isAdd;
+    }
+
+    function _stake(StakeParams memory p) internal {
+        require(p.amount > 0, "Need to stake > 0");
+        if(p.asset == StakeAsset.USDL) {
+            if(p.isAdd) {
+                deal(address(d.usdl()), address(this), p.amount);
+            }
+            // uint256 amountUSDL = d.usdl().balanceOf(address(this));
+            // require(amountUSDL > 0, "No USDL");
+            d.usdl().approve(address(d.getAddresses().xusdl), p.amount);
+            IXUSDL(d.getAddresses().xusdl).deposit(p.amount, address(this));
+            // uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
+            require(IXUSDL(d.getAddresses().xusdl).balanceOf(address(this)) > 0, "No XUSDL");
+        }
+        else if(p.asset == StakeAsset.LemmaETH) {
+            if(p.isAdd) {
+                deal(address(d.lemmaSynth()), address(this), p.amount);
+            }
+            // uint256 amountUSDL = d.usdl().balanceOf(address(this));
+            // require(amountUSDL > 0, "No USDL");
+            d.lemmaSynth().approve(address(d.getAddresses().xLemmaSynthEth), p.amount);
+            IXUSDL(d.getAddresses().xLemmaSynthEth).deposit(p.amount, address(this));
+            // uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
+            require(IXUSDL(d.getAddresses().xLemmaSynthEth).balanceOf(address(this)) > 0, "No XUSDL");
+        } else {
+            require(false, "Unsupported Asset");
+        }
+    }
+
     function testDistributeFeesForBtc() public noAsstesLeft {
         testSetupForSwap();
         d.askForMoney(address(d.wbtc()), 1e6);
@@ -423,14 +463,13 @@ contract ContractTest is Test {
         // NOTE: Can't mint it because otherwise there would be 2 interactions withe PerpLemmaCommon.sol in the same TX and only LemmaSwap is allowed 
         // deal(address(d.weth()), address(this), 1 ether);
         // _mintUSDLWExactCollateralNoChecks(address(this), address(d.weth()), 1 ether);
-        deal(address(d.usdl()), address(this), 1 ether);
 
-        uint256 amountUSDL = d.usdl().balanceOf(address(this));
-        require(amountUSDL > 0, "No USDL");
-        d.usdl().approve(address(d.getAddresses().xusdl), amountUSDL);
-        IXUSDL(d.getAddresses().xusdl).deposit(amountUSDL, address(this));
-        uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
-        require(amountXUSDL > 0, "No XUSDL");
+        _stake(StakeParams({
+            asset: StakeAsset.USDL,
+            amount: 1 ether,
+            isAdd: true
+        }));
+
 
         console.log("[testDistributeFeesForBtc()] xUSDL totalSupply = ", IXUSDL(d.getAddresses().xusdl).totalSupply());
         console.log("[testDistributeFeesForBtc()] LemmaSynthBtc totalSupply = ", IXUSDL(d.getAddresses().LemmaSynthBtc).totalSupply());
