@@ -414,7 +414,8 @@ contract ContractTest is Test {
 
     enum StakeAsset {
         USDL,
-        LemmaETH
+        LemmaETH,
+        LemmaBTC
     }
 
     // NOTE: Introduced as a trick to have functions with named arguments which makes the code more readable  
@@ -422,6 +423,7 @@ contract ContractTest is Test {
         StakeAsset asset;
         uint256 amount;
         bool isAdd;
+        address recipient;
     }
 
     function _stake(StakeParams memory p) internal {
@@ -433,21 +435,36 @@ contract ContractTest is Test {
             // uint256 amountUSDL = d.usdl().balanceOf(address(this));
             // require(amountUSDL > 0, "No USDL");
             d.usdl().approve(address(d.getAddresses().xusdl), p.amount);
-            IXUSDL(d.getAddresses().xusdl).deposit(p.amount, address(this));
+            IXUSDL(d.getAddresses().xusdl).deposit(p.amount, p.recipient);
             // uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
-            require(IXUSDL(d.getAddresses().xusdl).balanceOf(address(this)) > 0, "No XUSDL");
+            require(IXUSDL(d.getAddresses().xusdl).balanceOf(p.recipient) > 0, "No XUSDL");
+            require(IXUSDL(d.getAddresses().xusdl).totalSupply() > 0, "No XUSDL Supply");
         }
         else if(p.asset == StakeAsset.LemmaETH) {
             if(p.isAdd) {
-                deal(address(d.lemmaSynth()), address(this), p.amount);
+                deal(address(d.lemmaSynthEth()), address(this), p.amount);
             }
             // uint256 amountUSDL = d.usdl().balanceOf(address(this));
             // require(amountUSDL > 0, "No USDL");
-            d.lemmaSynth().approve(address(d.getAddresses().xLemmaSynthEth), p.amount);
-            IXUSDL(d.getAddresses().xLemmaSynthEth).deposit(p.amount, address(this));
+            d.lemmaSynthEth().approve(address(d.getAddresses().xLemmaSynthEth), p.amount);
+            IXUSDL(d.getAddresses().xLemmaSynthEth).deposit(p.amount, p.recipient);
             // uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
-            require(IXUSDL(d.getAddresses().xLemmaSynthEth).balanceOf(address(this)) > 0, "No XUSDL");
-        } else {
+            require(IXUSDL(d.getAddresses().xLemmaSynthEth).balanceOf(p.recipient) > 0, "No XSynth");
+            require(IXUSDL(d.getAddresses().xLemmaSynthEth).totalSupply() > 0, "No XSynth Supply");
+        } 
+        else if(p.asset == StakeAsset.LemmaBTC) {
+            if(p.isAdd) {
+                deal(address(d.lemmaSynthBtc()), address(this), p.amount);
+            }
+            // uint256 amountUSDL = d.usdl().balanceOf(address(this));
+            // require(amountUSDL > 0, "No USDL");
+            d.lemmaSynthBtc().approve(address(d.getAddresses().xLemmaSynthBtc), p.amount);
+            IXUSDL(d.getAddresses().xLemmaSynthBtc).deposit(p.amount, p.recipient);
+            // uint256 amountXUSDL = IXUSDL(d.getAddresses().xusdl).balanceOf(address(this));
+            require(IXUSDL(d.getAddresses().xLemmaSynthBtc).balanceOf(p.recipient) > 0, "No XSynth");
+            require(IXUSDL(d.getAddresses().xLemmaSynthBtc).totalSupply() > 0, "No XSynth Supply");
+        } 
+        else {
             require(false, "Unsupported Asset");
         }
     }
@@ -467,7 +484,16 @@ contract ContractTest is Test {
         _stake(StakeParams({
             asset: StakeAsset.USDL,
             amount: 1 ether,
-            isAdd: true
+            isAdd: true,
+            recipient: vm.addr(1)
+        }));
+
+
+        _stake(StakeParams({
+            asset: StakeAsset.LemmaBTC,
+            amount: 0.2 ether,
+            isAdd: true,
+            recipient: vm.addr(2)
         }));
 
 
@@ -475,8 +501,8 @@ contract ContractTest is Test {
         console.log("[testDistributeFeesForBtc()] LemmaSynthBtc totalSupply = ", IXUSDL(d.getAddresses().LemmaSynthBtc).totalSupply());
 
         uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
+        uint256 balSynthBTCBefore = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        uint256 balSynthETHBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
         d.feesAccumulator().distibuteFees(
             address(d.wbtc()),
             abi.encodeCall(
@@ -485,9 +511,18 @@ contract ContractTest is Test {
             )
         );
         uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc)
-            .balanceOf(d.getAddresses().xLemmaSynthBtc);
+        uint256 balSynthBTCAfter = ILemmaSynth(d.getAddresses().LemmaSynthBtc).balanceOf(d.getAddresses().xLemmaSynthBtc);
+        uint256 balSynthETHAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth).balanceOf(d.getAddresses().xLemmaSynthEth);
+
+        console.log("[testDistributeFeesForBtc()] balUsdlBefore = ", balUsdlBefore);
+        console.log("[testDistributeFeesForBtc()] balUsdlAfter = ", balUsdlAfter);
+        console.log("[testDistributeFeesForBtc()] balSynthBTCBefore = ", balSynthBTCBefore);
+        console.log("[testDistributeFeesForBtc()] balSynthBTCAfter = ", balSynthBTCAfter);
+        console.log("[testDistributeFeesForBtc()] balSynthETHBefore = ", balSynthETHBefore);
+        console.log("[testDistributeFeesForBtc()] balSynthETHAfter = ", balSynthETHAfter);
+        // NOTE: Something staken in xUSDL so rewards increased
         assertGt(balUsdlAfter, balUsdlBefore);
-        assertEq(balSynthAfter, balSynthBefore);
+        assertEq(balSynthETHAfter, balSynthETHBefore);
+        assertGt(balSynthBTCAfter, balSynthBTCBefore);
     }
 }

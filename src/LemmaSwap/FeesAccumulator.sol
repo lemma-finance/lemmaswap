@@ -199,12 +199,14 @@ contract FeesAccumulator is AccessControl {
                 IERC20(_token)
             );
             console.log("T333333333");
+        } else {
+            console.log("[distributeToXUSDL()] XUSDL No Stake");
         }
     }
 
 
-    function distributeToXSynth(Amount memory collateralAmountToXSynth, address synth, uint256 dexIndex, address _token, bytes calldata _swapData) internal {
-        if(IERC20Decimals(synth).totalSupply() > 0)
+    function distributeToXSynth(Amount memory collateralAmountToXSynth, SynthAddresses memory _sa, uint256 dexIndex, address _token, bytes calldata _swapData) internal {
+        if(IERC20Decimals(_sa.xSynthAddress).totalSupply() > 0)
         {
             address settlmentToken = usdl.perpSettlementToken();
 
@@ -224,17 +226,19 @@ contract FeesAccumulator is AccessControl {
             }
 
             // IERC20Decimals(IERC20Decimals(settlmentToken)).approve(_sa.synthAddress, 0);
-            IERC20Decimals(IERC20Decimals(settlmentToken)).approve(synth, collateralAmountToXSynth.amount);
+            IERC20Decimals(IERC20Decimals(settlmentToken)).approve(_sa.synthAddress, collateralAmountToXSynth.amount);
 
             // collateralAmount = (collateralAmount * 1e18) / (10**decimals);
 
-            ILemmaSynth(synth).depositToWExactCollateral(
-                synth,
+            ILemmaSynth(_sa.synthAddress).depositToWExactCollateral(
+                _sa.xSynthAddress,
                 convertDecimals(collateralAmountToXSynth, 18).amount,
                 0,
                 0,
                 IERC20(settlmentToken)
             );
+        } else {
+            console.log("[distributeToXSynth()] xSynth No Stake");
         }
     }
 
@@ -291,7 +295,7 @@ contract FeesAccumulator is AccessControl {
         console.log("collateralAmountToXUSDL Decimals = ", collateralAmountToXUSDL.decimals);
 
         console.log("[distibuteFees()] T1");
-        distributeToXSynth(diff(totalBalance, collateralAmountToXUSDL), _sa.xSynthAddress, dexIndex, _token, _swapData);
+        distributeToXSynth(diff(totalBalance, collateralAmountToXUSDL), _sa, dexIndex, _token, _swapData);
         console.log("[distibuteFees()] T3");
 
         // if(IERC20Decimals(_sa.xSynthAddress).totalSupply() > 0)

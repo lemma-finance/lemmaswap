@@ -170,6 +170,8 @@ contract Deployment is Test {
     IERC20 public wbtc;
     IUSDLemma public usdl;
     ILemmaSynth public lemmaSynth;
+    ILemmaSynth public lemmaSynthEth;
+    ILemmaSynth public lemmaSynthBtc;
     LemmaSwap public lemmaSwap;
     FeesAccumulator public feesAccumulator;
     IWETH9 public weth;
@@ -307,6 +309,8 @@ contract Deployment is Test {
 
         usdl = IUSDLemma(testnet_optimism_kovan.USDLemma);
         lemmaSynth = ILemmaSynth(testnet_optimism_kovan.LemmaSynthEth);
+        lemmaSynthEth = ILemmaSynth(testnet_optimism_kovan.LemmaSynthEth);
+        lemmaSynthBtc = ILemmaSynth(testnet_optimism_kovan.LemmaSynthBtc);
 
         lemmaSwap = new LemmaSwap(address(usdl), address(weth), admin);
         lemmaSwap.grantRole(OWNER_ROLE, address(this));
