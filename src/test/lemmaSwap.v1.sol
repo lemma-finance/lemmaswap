@@ -387,31 +387,6 @@ contract ContractTest is Test {
         // );
     }
 
-    function testDistributeFeesForEth() public noAsstesLeft {
-        testSetupForSwap();
-
-        d.askForMoney(address(d.weth()), 1e18);
-        deal(address(d.usdc()), address(this), 10e6);
-
-        d.weth().transfer(address(d.feesAccumulator()), 1e18);
-
-        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        d.feesAccumulator().distibuteFees(
-            address(d.weth()),
-            abi.encodeCall(
-                MockSwapRouter.swap,
-                (address(d.usdc()), address(d.feesAccumulator()), 10e6)
-            )
-        );
-        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
-        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
-            .balanceOf(d.getAddresses().xLemmaSynthEth);
-        assertGt(balUsdlAfter, balUsdlBefore);
-        assertGt(balSynthAfter, balSynthBefore);
-    }
-
     enum StakeAsset {
         USDL,
         LemmaETH,
@@ -468,6 +443,47 @@ contract ContractTest is Test {
             require(false, "Unsupported Asset");
         }
     }
+
+    function testDistributeFeesForEth() public noAsstesLeft {
+        testSetupForSwap();
+
+        d.askForMoney(address(d.weth()), 1e18);
+        deal(address(d.usdc()), address(this), 10e6);
+
+        d.weth().transfer(address(d.feesAccumulator()), 1e18);
+
+        _stake(StakeParams({
+            asset: StakeAsset.USDL,
+            amount: 1 ether,
+            isAdd: true,
+            recipient: vm.addr(1)
+        }));
+
+
+        _stake(StakeParams({
+            asset: StakeAsset.LemmaETH,
+            amount: 0.2 ether,
+            isAdd: true,
+            recipient: vm.addr(2)
+        }));
+
+        uint256 balUsdlBefore = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthBefore = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+            .balanceOf(d.getAddresses().xLemmaSynthEth);
+        d.feesAccumulator().distibuteFees(
+            address(d.weth()),
+            abi.encodeCall(
+                MockSwapRouter.swap,
+                (address(d.usdc()), address(d.feesAccumulator()), 10e6)
+            )
+        );
+        uint256 balUsdlAfter = d.usdl().balanceOf(d.getAddresses().xusdl);
+        uint256 balSynthAfter = ILemmaSynth(d.getAddresses().LemmaSynthEth)
+            .balanceOf(d.getAddresses().xLemmaSynthEth);
+        assertGt(balUsdlAfter, balUsdlBefore);
+        assertGt(balSynthAfter, balSynthBefore);
+    }
+
 
     function testDistributeFeesForBtc() public noAsstesLeft {
         testSetupForSwap();

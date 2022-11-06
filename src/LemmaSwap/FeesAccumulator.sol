@@ -245,10 +245,16 @@ contract FeesAccumulator is AccessControl {
     /// @notice distibuteFees function will distribute fees of any token between xUsdl and xLemmaSynth contract address
     /// @param _token erc20 tokenAddress to tranfer as a gees betwwn xUsdl and xLemmaSynth
     /// @param _swapData swap data to do the actual swap
+    /// @dev We expect `_token` not to be USDC but any other non stable token supported, the reason is this method distributes pro rata between xUSDL and the corresponding xSynth holder and USDC has no corresponding Synth 
     function distibuteFees(address _token, bytes calldata _swapData)
         external
         onlyRole(FEES_TRANSFER_ROLE)
     {
+        // NOTE: We can't accept `_token` == USDC since there is no equivalent synthetic
+        SynthAddresses memory _sa = synthMapping[_token];
+
+        require(_sa.synthAddress != address(0), "Token not supported");
+
         Amount memory totalBalance = Amount({
             amount: IERC20Decimals(_token).balanceOf(address(this)),
             decimals: IERC20Decimals(_token).decimals()
@@ -261,9 +267,6 @@ contract FeesAccumulator is AccessControl {
         // uint256 decimals = IERC20Decimals(_token).decimals();
         require(totalBalance.amount > 0, "!totalBalance");
         uint256 dexIndex = _convertCollateralToValidDexIndex(_token, true);
-
-
-        SynthAddresses memory _sa = synthMapping[_token];
         
         // TODO: Ideally do not assume oracle decimals is 18 but get it from a method
         Amount memory totalStaken = getTotalStaken(_sa.xSynthAddress, dexIndex, _token);
