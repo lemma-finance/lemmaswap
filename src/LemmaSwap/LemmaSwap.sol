@@ -386,6 +386,10 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         TransferHelper.safeTransfer(token, msg.sender, amount);
     }
 
+
+    function _addLiquidity(address token, aaa)
+
+
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -396,6 +400,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         address to,
         uint256 deadline
     ) external override returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
-
+        require(to != address(0), "Invalid recipient");
+        require(block.timestamp <= deadline, "Expired");
     }
 }
