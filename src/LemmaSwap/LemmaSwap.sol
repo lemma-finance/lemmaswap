@@ -5,12 +5,13 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+import {ILemmaSwap} from "../interfaces/ILemmaSwap.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
 /// @author Lemma Finance
 /// @notice LemmaSwap contract to execute spot trades using futures’ liquidity
-contract LemmaSwap is AccessControl, ReentrancyGuard {
+contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
@@ -383,5 +384,18 @@ contract LemmaSwap is AccessControl, ReentrancyGuard {
         onlyRole(OWNER_ROLE)
     {
         TransferHelper.safeTransfer(token, msg.sender, amount);
+    }
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    ) external override returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
+
     }
 }
