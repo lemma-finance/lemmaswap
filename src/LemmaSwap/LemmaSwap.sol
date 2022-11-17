@@ -387,7 +387,9 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     }
 
 
-    function _addLiquidity(address token, aaa)
+    function _addLiquidity(address token, uint256 amount) {
+
+    }
 
 
     function addLiquidity(
