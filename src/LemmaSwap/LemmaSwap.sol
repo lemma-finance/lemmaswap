@@ -13,6 +13,7 @@ import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
 contract USDL1{
     address public xUsdl;
+    address public perpSettlementToken;
 }
 
 /// @author Lemma Finance
@@ -394,15 +395,14 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     }
 
 
-    function _addLiquidity1(address token, uint256 amount, address to) internal returns(uint256 amountIn, uint256 amountOut) {
+    function _addLiquidity1(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
         IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
 
         uint256 usdlBefore = usdl.balanceOf(address(this)); 
         // NOTE: Atm just minting USDL as it is generic enough for any collateral
-        amountIn = amount;
         usdl.depositToWExactCollateral(
             address(this),
-            convertAmountIn18Decimals(IERC20Decimals(token), amountIn),
+            convertAmountIn18Decimals(IERC20Decimals(token), amount),
             _convertCollateralToValidDexIndex(token),
             0,
             IERC20(token)
@@ -413,7 +413,48 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         amountOut = xusdl.deposit(amountToDeposit, to);
     }
 
-    function addLiquidity(
+
+
+    function _mintUSDLWithExactCollateral(IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
+        uint256 usdlBefore = usdl.balanceOf(address(this)); 
+        usdl.depositToWExactCollateral(
+            address(this),
+            convertAmountIn18Decimals(token, amount),
+            _convertCollateralToValidDexIndex(address(token)),
+            0,
+            IERC20(token)
+        );
+        uint256 usdlAfter = usdl.balanceOf(address(this)); 
+        require(usdlAfter > usdlBefore, "amount");
+        amountUSDL = usdlAfter - usdlBefore;
+    }
+
+    function _mintSynthWithExactCollateral(IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
+        uint256 usdlBefore = usdl.balanceOf(address(this)); 
+        usdl.depositToWExactCollateral(
+            address(this),
+            convertAmountIn18Decimals(token, amount),
+            _convertCollateralToValidDexIndex(address(token)),
+            0,
+            IERC20(token)
+        );
+        uint256 usdlAfter = usdl.balanceOf(address(this)); 
+        require(usdlAfter > usdlBefore, "amount");
+        amountUSDL = usdlAfter - usdlBefore;
+    }
+
+    function _addLiquidity2(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
+        IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
+        uint256 amountToDeposit; 
+        if(token == USDL1(address(usdl)).perpSettlementToken()) {
+            amountToDeposit = _mintUSDLWithExactCollateral(IERC20Decimals(token), amount);
+        } else {
+            // TODO: Implement
+        }
+        amountOut = xusdl.deposit(amountToDeposit, to);
+    }
+
+    function addLiquidityIgnoreTokenB(
         address token,
         address tokenIgnored,
         uint256 amountDesired,
@@ -423,8 +464,30 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         address to,
         uint256 deadline
     ) external override returns (uint256 amountIn, uint256 amountInIgnored, uint256 liquidity) {
+        require(amountDesired > 0, "Zero Amount");
         require(to != address(0), "Invalid recipient");
         require(block.timestamp <= deadline, "Expired");
-        (amountIn, liquidity) = _addLiquidity1(token, amountDesired, msg.sender);
+        amountIn = amountDesired;
+        liquidity = _addLiquidity1(token, amountIn, msg.sender);
+    }
+
+    function addLiquidity(
+        address tokenStable,
+        address tokenVariable,
+        uint256 amountStableDesired,
+        uint256 amountVariableDesired,
+        uint256 amountStableMin,
+        uint256 amountVariableMin,
+        address to,
+        uint256 deadline
+    ) external override returns (uint256 amountStableIn, uint256 amountVariableIn, uint256 amountXSynth) {
+        require(amountDesired > 0, "Zero Amount");
+        require(to != address(0), "Invalid recipient");
+        require(block.timestamp <= deadline, "Expired");
+
+        require(tokenStable == USDL1(address(usdl)).perpSettlementToken(), "tokenA has to be SettlementToken");
+        amountStableIn = amountStableDesired;
+        _addLiquidity2(tokenStable, amountStableIn, msg.sender);
+        amountXSynth = _addLiquidity2(tokenVariable, amountVariableIn, msg.sender);
     }
 }
