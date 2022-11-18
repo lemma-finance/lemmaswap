@@ -5,7 +5,9 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+// import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IXUSDL} from "../interfaces/IXUSDL.sol";
+import {IXLemmaSynth} from "../interfaces/IXLemmaSynth.sol";
 import {ILemmaSwap} from "../interfaces/ILemmaSwap.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
@@ -13,7 +15,28 @@ import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 
 contract USDL1{
     address public xUsdl;
+    mapping(uint256 => mapping(address => address)) public perpetualDEXWrappers;
     address public perpSettlementToken;
+}
+
+contract LemmaSynth1 {
+    address public xSynth;
+}
+
+contract Perp1{
+    address public lemmaSynth;
+}
+
+
+// NOTE: They both share this same interface
+interface IUSDLAndSynth {
+    function depositToWExactCollateral(
+        address to,
+        uint256 collateralAmount,
+        uint256 perpetualDEXIndex,
+        uint256 minUSDLToMint,
+        IERC20 collateral
+    ) external;
 }
 
 /// @author Lemma Finance
@@ -395,99 +418,131 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     }
 
 
-    function _addLiquidity1(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
-        IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
+    // function _addLiquidity1(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
+    //     IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
 
-        uint256 usdlBefore = usdl.balanceOf(address(this)); 
-        // NOTE: Atm just minting USDL as it is generic enough for any collateral
-        usdl.depositToWExactCollateral(
-            address(this),
-            convertAmountIn18Decimals(IERC20Decimals(token), amount),
-            _convertCollateralToValidDexIndex(token),
-            0,
-            IERC20(token)
-        );
-        uint256 usdlAfter = usdl.balanceOf(address(this)); 
-        require(usdlAfter > usdlBefore, "amount");
-        uint256 amountToDeposit = usdlAfter - usdlBefore;
-        amountOut = xusdl.deposit(amountToDeposit, to);
-    }
+    //     uint256 usdlBefore = usdl.balanceOf(address(this)); 
+    //     // NOTE: Atm just minting USDL as it is generic enough for any collateral
+    //     usdl.depositToWExactCollateral(
+    //         address(this),
+    //         convertAmountIn18Decimals(IERC20Decimals(token), amount),
+    //         _convertCollateralToValidDexIndex(token),
+    //         0,
+    //         IERC20(token)
+    //     );
+    //     uint256 usdlAfter = usdl.balanceOf(address(this)); 
+    //     require(usdlAfter > usdlBefore, "amount");
+    //     uint256 amountToDeposit = usdlAfter - usdlBefore;
+    //     amountOut = xusdl.deposit(amountToDeposit, to);
+    // }
 
 
 
-    function _mintUSDLWithExactCollateral(IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
-        uint256 usdlBefore = usdl.balanceOf(address(this)); 
-        usdl.depositToWExactCollateral(
-            address(this),
-            convertAmountIn18Decimals(token, amount),
-            _convertCollateralToValidDexIndex(address(token)),
-            0,
-            IERC20(token)
-        );
-        uint256 usdlAfter = usdl.balanceOf(address(this)); 
-        require(usdlAfter > usdlBefore, "amount");
-        amountUSDL = usdlAfter - usdlBefore;
-    }
-
-    function _mintSynthWithExactCollateral(IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
-        uint256 usdlBefore = usdl.balanceOf(address(this)); 
-        usdl.depositToWExactCollateral(
+    function _mintWithExactCollateral(IUSDLAndSynth usdlOrSynth, IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
+        uint256 amountBefore = IERC20Decimals(address(usdlOrSynth)).balanceOf(address(this)); 
+        usdlOrSynth.depositToWExactCollateral(
             address(this),
             convertAmountIn18Decimals(token, amount),
             _convertCollateralToValidDexIndex(address(token)),
             0,
             IERC20(token)
         );
-        uint256 usdlAfter = usdl.balanceOf(address(this)); 
-        require(usdlAfter > usdlBefore, "amount");
-        amountUSDL = usdlAfter - usdlBefore;
+        uint256 amountAfter = IERC20Decimals(address(usdlOrSynth)).balanceOf(address(this)); 
+        require(amountAfter > amountBefore, "amount");
+        amountUSDL = amountAfter - amountBefore;
     }
 
-    function _addLiquidity2(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
-        IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
-        uint256 amountToDeposit; 
-        if(token == USDL1(address(usdl)).perpSettlementToken()) {
-            amountToDeposit = _mintUSDLWithExactCollateral(IERC20Decimals(token), amount);
+    // function _addLiquidity2(address token, uint256 amount, address to) internal returns(uint256 amountOut) {
+    //     IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
+    //     address perpSettlementToken = USDL1(address(usdl)).perpSettlementToken();
+
+    //     // NOTE: All of this has been done to avoid adding one more state variable which makes the upgrade more difficult. 
+    //     // NOTE: Also, it assumes LemmaSynth is the generic entry point for all the N PerpDEXWrappers so that any of the N PerpDEXWrappers point to the same LemmaSynt Contract
+    //     address perpSettlementTokenDEXWrapper = USDL1(address(usdl)).perpetualDEXWrappers(0, perpSettlementToken);
+    //     ILemmaSynth lemmaSynth = ILemmaSynth(Perp1((perpSettlementTokenDEXWrapper)).lemmaSynth());
+
+    //     uint256 amountToDeposit; 
+    //     if(token == perpSettlementToken) {
+    //         amountToDeposit = _mintUSDLWithExactCollateral(IERC20Decimals(token), amount);
+    //     } else {
+    //         // TODO: Implement
+    //     }
+    //     amountOut = xusdl.deposit(amountToDeposit, to);
+    // }
+
+    function _addLiquidity(address tokenIn, uint256 amountIn, address to) internal returns(address tokenOut, uint256 amountOut) {
+        address perpSettlementToken = USDL1(address(usdl)).perpSettlementToken();
+        if(tokenIn == perpSettlementToken) {
+            // NOTE: USDC --> USDL 
+            tokenOut = address(usdl);
+            amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(tokenIn), amountIn);
+            amountOut = IXUSDL(USDL1(tokenOut).xUsdl()).deposit(amountOut, to);
         } else {
-            // TODO: Implement
+            // NOTE: Variable Collateral --> Corresponding Synth
+            address perpTokenDEXWrapper = USDL1(address(usdl)).perpetualDEXWrappers(0, tokenIn);
+            tokenOut = Perp1(perpTokenDEXWrapper).lemmaSynth();
+            amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(tokenIn), amountIn);
+            amountOut = IXLemmaSynth(LemmaSynth1(tokenOut).xSynth()).deposit(amountOut, to);
         }
-        amountOut = xusdl.deposit(amountToDeposit, to);
     }
 
-    function addLiquidityIgnoreTokenB(
-        address token,
-        address tokenIgnored,
-        uint256 amountDesired,
-        uint256 amountIgnored,
-        uint256 amountMin,
-        uint256 amountMinIgnored,
-        address to,
-        uint256 deadline
-    ) external override returns (uint256 amountIn, uint256 amountInIgnored, uint256 liquidity) {
-        require(amountDesired > 0, "Zero Amount");
-        require(to != address(0), "Invalid recipient");
-        require(block.timestamp <= deadline, "Expired");
-        amountIn = amountDesired;
-        liquidity = _addLiquidity1(token, amountIn, msg.sender);
-    }
+    // function addLiquidityIgnoreTokenB(
+    //     address token,
+    //     address tokenIgnored,
+    //     uint256 amountDesired,
+    //     uint256 amountIgnored,
+    //     uint256 amountMin,
+    //     uint256 amountMinIgnored,
+    //     address to,
+    //     uint256 deadline
+    // ) external /*override*/ returns (uint256 amountIn, uint256 amountInIgnored, uint256 liquidity) {
+    //     require(amountDesired > 0, "Zero Amount");
+    //     require(to != address(0), "Invalid recipient");
+    //     require(block.timestamp <= deadline, "Expired");
+    //     amountIn = amountDesired;
+    //     liquidity = _addLiquidity1(token, amountIn, msg.sender);
+    // }
+
+
+    // function addLiquidity1(
+    //     address tokenStable,
+    //     address tokenVariable,
+    //     uint256 amountStableDesired,
+    //     uint256 amountVariableDesired,
+    //     uint256 amountStableMin,
+    //     uint256 amountVariableMin,
+    //     address to,
+    //     uint256 deadline
+    // ) external override returns (uint256 amountStableIn, uint256 amountVariableIn, uint256 amountXSynth) {
+    //     require(amountStableDesired > 0, "Zero Stable Amount");
+    //     require(amountVariableDesired > 0, "Zero Variable Amount");
+    //     require(to != address(0), "Invalid recipient");
+    //     require(block.timestamp <= deadline, "Expired");
+
+    //     require(tokenStable == USDL1(address(usdl)).perpSettlementToken(), "tokenA has to be SettlementToken");
+    //     amountStableIn = amountStableDesired;
+    //     _addLiquidity2(tokenStable, amountStableIn, msg.sender);
+    //     amountXSynth = _addLiquidity2(tokenVariable, amountVariableIn, msg.sender);
+    // }
+
 
     function addLiquidity(
-        address tokenStable,
-        address tokenVariable,
-        uint256 amountStableDesired,
-        uint256 amountVariableDesired,
-        uint256 amountStableMin,
-        uint256 amountVariableMin,
+        address tokenA,
+        address tokenB,
+        uint256 amountA,
+        uint256 amountB,
+        uint256 unusedA,
+        uint256 unusedB,
         address to,
         uint256 deadline
-    ) external override returns (uint256 amountStableIn, uint256 amountVariableIn, uint256 amountXSynth) {
-        require(amountDesired > 0, "Zero Amount");
+    ) external override returns (uint256 amountXA, uint256 amountXB, uint256 unused) {
+        require(amountA > 0, "Zero A Amount");
+        require(amountB > 0, "Zero B Amount");
         require(to != address(0), "Invalid recipient");
         require(block.timestamp <= deadline, "Expired");
 
-        require(tokenStable == USDL1(address(usdl)).perpSettlementToken(), "tokenA has to be SettlementToken");
-        amountStableIn = amountStableDesired;
-        _addLiquidity2(tokenStable, amountStableIn, msg.sender);
-        amountXSynth = _addLiquidity2(tokenVariable, amountVariableIn, msg.sender);
+        (, amountXA) = _addLiquidity(tokenA, amountA, to);
+        (, amountXB) = _addLiquidity(tokenB, amountB, to);
     }
+
 }
