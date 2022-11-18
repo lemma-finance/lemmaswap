@@ -5,9 +5,15 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {IUSDLemma} from "../interfaces/IUSDLemma.sol";
+import {IXUSDL} from "../interfaces/IXUSDL.sol";
 import {ILemmaSwap} from "../interfaces/ILemmaSwap.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
+
+
+contract USDL1{
+    address public xUsdl;
+}
 
 /// @author Lemma Finance
 /// @notice LemmaSwap contract to execute spot trades using futures’ liquidity
@@ -50,6 +56,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
 
     // Events
     event NewUSDL(address);
+    event NewXUSDL(address);
     event NewFeesAccumulator(address);
     event NewCollateralToDEXIndex(address, uint8);
     event NewLemmaSwapFees(uint256);
@@ -387,22 +394,37 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     }
 
 
-    function _addLiquidity(address token, uint256 amount) {
+    function _addLiquidity1(address token, uint256 amount, address to) internal returns(uint256 amountIn, uint256 amountOut) {
+        IXUSDL xusdl = IXUSDL(USDL1(address(usdl)).xUsdl());
 
+        uint256 usdlBefore = usdl.balanceOf(address(this)); 
+        // NOTE: Atm just minting USDL as it is generic enough for any collateral
+        amountIn = amount;
+        usdl.depositToWExactCollateral(
+            address(this),
+            convertAmountIn18Decimals(IERC20Decimals(token), amountIn),
+            _convertCollateralToValidDexIndex(token),
+            0,
+            IERC20(token)
+        );
+        uint256 usdlAfter = usdl.balanceOf(address(this)); 
+        require(usdlAfter > usdlBefore, "amount");
+        uint256 amountToDeposit = usdlAfter - usdlBefore;
+        amountOut = xusdl.deposit(amountToDeposit, to);
     }
 
-
     function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
+        address token,
+        address tokenIgnored,
+        uint256 amountDesired,
+        uint256 amountIgnored,
+        uint256 amountMin,
+        uint256 amountMinIgnored,
         address to,
         uint256 deadline
-    ) external override returns (uint256 amountA, uint256 amountB, uint256 liquidity) {
+    ) external override returns (uint256 amountIn, uint256 amountInIgnored, uint256 liquidity) {
         require(to != address(0), "Invalid recipient");
         require(block.timestamp <= deadline, "Expired");
+        (amountIn, liquidity) = _addLiquidity1(token, amountDesired, msg.sender);
     }
 }
