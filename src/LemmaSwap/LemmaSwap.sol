@@ -447,7 +447,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         usdlOrSynth.depositToWExactCollateral(
             address(this),
             convertAmountIn18Decimals(token, amount),
-            _convertCollateralToValidDexIndex(address(token)),
+            0,
+            // _convertCollateralToValidDexIndex(address(token)),
             0,
             IERC20(token)
         );
@@ -505,6 +506,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         tokenOut = Perp1(perpTokenDEXWrapper).lemmaSynth();
         amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(stable), amountIn);
         console.log("_addLiquidityStable amountOut = ", amountOut);
+        IERC20Decimals(tokenOut).approve(address(LemmaSynth1(tokenOut).xSynth()), amountOut);
         amountOut = IXLemmaSynth(LemmaSynth1(tokenOut).xSynth()).deposit(amountOut, to);
         console.log("_addLiquidityStable End");
     }
@@ -513,6 +515,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
     function _addLiquidityVariable(address tokenIn, uint256 amountIn, address to) internal returns(address tokenOut, uint256 amountOut) {
         tokenOut = address(usdl);
         amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(tokenIn), amountIn);
+        IERC20Decimals(tokenOut).approve(address(USDL1(tokenOut).xUsdl()), amountOut);
         amountOut = IXUSDL(USDL1(tokenOut).xUsdl()).deposit(amountOut, to);
     }
 
@@ -594,7 +597,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         require(block.timestamp <= deadline, "Expired");
 
         (, amountXA) = _addLiquidityStable(stable, variable, amountStable, to);
-        (, amountXB) = _addLiquidity(variable, amountVariable, to);
+        (, amountXB) = _addLiquidityVariable(variable, amountVariable, to);
     }
 
 
