@@ -486,6 +486,26 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         }
     }
 
+
+    function _addLiquidityStable(address stable, address tokenForSynth, uint256 amountIn, address to) internal returns(address tokenOut, uint256 amountOut) {
+        address perpSettlementToken = USDL1(address(usdl)).perpSettlementToken();
+        require(stable == perpSettlementToken, "PerpSettlementToken");
+        // NOTE: USDC --> USDL 
+            // NOTE: Variable Collateral --> Corresponding Synth
+        address perpTokenDEXWrapper = USDL1(address(usdl)).perpetualDEXWrappers(0, tokenForSynth);
+        // address lemmaSynth = Perp1(perpTokenDEXWrapper).lemmaSynth();
+        tokenOut = Perp1(perpTokenDEXWrapper).lemmaSynth();
+        amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(stable), amountIn);
+        amountOut = IXLemmaSynth(LemmaSynth1(tokenOut).xSynth()).deposit(amountOut, to);
+    }
+
+
+    function _addLiquidityVariable(address tokenIn, uint256 amountIn, address to) internal returns(address tokenOut, uint256 amountOut) {
+        tokenOut = address(usdl);
+        amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(tokenIn), amountIn);
+        amountOut = IXUSDL(USDL1(tokenOut).xUsdl()).deposit(amountOut, to);
+    }
+
     // function addLiquidityIgnoreTokenB(
     //     address token,
     //     address tokenIgnored,
@@ -526,23 +546,46 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
     // }
 
 
+
+    // function addLiquidity_OldProposal(
+    //     address tokenA,
+    //     address tokenB,
+    //     uint256 amountA,
+    //     uint256 amountB,
+    //     uint256 unusedA,
+    //     uint256 unusedB,
+    //     address to,
+    //     uint256 deadline
+    // ) external override returns (uint256 amountXA, uint256 amountXB, uint256 unused) {
+    //     require(amountA > 0, "Zero A Amount");
+    //     require(amountB > 0, "Zero B Amount");
+    //     require(to != address(0), "Invalid recipient");
+    //     require(block.timestamp <= deadline, "Expired");
+
+    //     (, amountXA) = _addLiquidity(tokenA, amountA, to);
+    //     (, amountXB) = _addLiquidity(tokenB, amountB, to);
+    // }
+
+
+
     function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountA,
-        uint256 amountB,
-        uint256 unusedA,
-        uint256 unusedB,
+        address stable,
+        address variable,
+        uint256 amountStable,
+        uint256 amountVariable,
+        uint256 unusedStable,
+        uint256 unusedVariable,
         address to,
         uint256 deadline
     ) external override returns (uint256 amountXA, uint256 amountXB, uint256 unused) {
-        require(amountA > 0, "Zero A Amount");
-        require(amountB > 0, "Zero B Amount");
+        require(amountStable > 0, "Zero Stable Amount");
+        require(amountVariable > 0, "Zero Variable Amount");
         require(to != address(0), "Invalid recipient");
         require(block.timestamp <= deadline, "Expired");
 
-        (, amountXA) = _addLiquidity(tokenA, amountA, to);
-        (, amountXB) = _addLiquidity(tokenB, amountB, to);
+        (, amountXA) = _addLiquidityStable(stable, variable, amountStable, to);
+        (, amountXB) = _addLiquidity(variable, amountVariable, to);
     }
+
 
 }
