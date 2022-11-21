@@ -440,6 +440,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
 
     function _mintWithExactCollateral(IUSDLAndSynth usdlOrSynth, IERC20Decimals token, uint256 amount) internal returns(uint256 amountUSDL) {
         uint256 amountBefore = IERC20Decimals(address(usdlOrSynth)).balanceOf(address(this)); 
+        TransferHelper.safeTransferFrom(address(token), msg.sender, address(this), amount);
+        token.approve(address(usdlOrSynth), amount);
         usdlOrSynth.depositToWExactCollateral(
             address(this),
             convertAmountIn18Decimals(token, amount),
