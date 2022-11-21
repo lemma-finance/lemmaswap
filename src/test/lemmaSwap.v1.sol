@@ -3,6 +3,7 @@ pragma solidity 0.8.14;
 
 import {TransferHelper} from "@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol";
 import {LemmaSwap} from "../LemmaSwap/LemmaSwap.sol";
+import {ILemmaSwap} from "../interfaces/ILemmaSwap.sol";
 import {ILemmaSynth} from "../interfaces/ILemmaSynth.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
 import {Deployment, Collateral, MockSwapRouter} from "./Contract_LV1.sol";
@@ -393,4 +394,30 @@ contract ContractTest is Test {
         assertGt(balUsdlAfter, balUsdlBefore);
         assertGt(balSynthAfter, balSynthBefore);
     }
+
+
+
+    function testAddLiquidity1() public {
+        address LPer1 = vm.addr(1);
+        deal(d.getAddresses().USDC, LPer1, 100000e12);
+        deal(d.getAddresses().WETH, LPer1, 100000e18);
+        uint256 amountUSDC = 1000e6;
+        uint256 amountWETH = 1e18;
+        vm.startPrank(LPer1);
+        IERC20(d.getAddresses().USDC).approve(address(d.lemmaSwap()), amountUSDC);
+        IERC20(d.getAddresses().WETH).approve(address(d.lemmaSwap()), amountWETH);
+        
+        d.lemmaSwap().addLiquidity(
+            d.getAddresses().USDC,
+            d.getAddresses().WETH,
+            amountUSDC,
+            amountWETH,
+            0,
+            0,
+            LPer1,
+            type(uint256).max
+        );
+        vm.stopPrank();
+
+    } 
 }
