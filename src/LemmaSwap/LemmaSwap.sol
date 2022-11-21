@@ -11,7 +11,7 @@ import {IXLemmaSynth} from "../interfaces/IXLemmaSynth.sol";
 import {ILemmaSwap} from "../interfaces/ILemmaSwap.sol";
 import {IWETH9} from "../interfaces/IWETH9.sol";
 import {IERC20Decimals, IERC20} from "../interfaces/IERC20Decimals.sol";
-
+import "forge-std/Test.sol";
 
 contract USDL1{
     address public xUsdl;
@@ -41,7 +41,7 @@ interface IUSDLAndSynth {
 
 /// @author Lemma Finance
 /// @notice LemmaSwap contract to execute spot trades using futures’ liquidity
-contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
+contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
 
@@ -442,6 +442,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
         uint256 amountBefore = IERC20Decimals(address(usdlOrSynth)).balanceOf(address(this)); 
         TransferHelper.safeTransferFrom(address(token), msg.sender, address(this), amount);
         token.approve(address(usdlOrSynth), amount);
+        console.log("_mintWithExactCollateral usdlOrSynth = ", address(usdlOrSynth));
+        console.log("_mintWithExactCollateral token = ", address(token));
         usdlOrSynth.depositToWExactCollateral(
             address(this),
             convertAmountIn18Decimals(token, amount),
@@ -449,6 +451,7 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
             0,
             IERC20(token)
         );
+        console.log("_mintWithExactCollateral amount = ", amount);
         uint256 amountAfter = IERC20Decimals(address(usdlOrSynth)).balanceOf(address(this)); 
         require(amountAfter > amountBefore, "amount");
         amountUSDL = amountAfter - amountBefore;
@@ -490,15 +493,20 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap {
 
 
     function _addLiquidityStable(address stable, address tokenForSynth, uint256 amountIn, address to) internal returns(address tokenOut, uint256 amountOut) {
+        console.log("_addLiquidityStable Start");
         address perpSettlementToken = USDL1(address(usdl)).perpSettlementToken();
         require(stable == perpSettlementToken, "PerpSettlementToken");
         // NOTE: USDC --> USDL 
             // NOTE: Variable Collateral --> Corresponding Synth
         address perpTokenDEXWrapper = USDL1(address(usdl)).perpetualDEXWrappers(0, tokenForSynth);
+        require(perpTokenDEXWrapper != address(0), "T1");
+        console.log("_addLiquidityStable perpTokenDEXWrapper = ", perpTokenDEXWrapper);
         // address lemmaSynth = Perp1(perpTokenDEXWrapper).lemmaSynth();
         tokenOut = Perp1(perpTokenDEXWrapper).lemmaSynth();
         amountOut = _mintWithExactCollateral(IUSDLAndSynth(tokenOut), IERC20Decimals(stable), amountIn);
+        console.log("_addLiquidityStable amountOut = ", amountOut);
         amountOut = IXLemmaSynth(LemmaSynth1(tokenOut).xSynth()).deposit(amountOut, to);
+        console.log("_addLiquidityStable End");
     }
 
 
