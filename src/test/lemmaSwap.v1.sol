@@ -423,4 +423,34 @@ contract ContractTest is Test {
         assertGt(IERC20Decimals(d.getAddresses().xusdl).balanceOf(LPer1), 0, "No non-zero xUSDL balance");
         assertGt(IERC20Decimals(d.getAddresses().xLemmaSynthEth).balanceOf(LPer1), 0, "No non-zero xLemmaSynth balance");
     } 
+
+
+
+
+    function testAddLiquidity11() public {
+        address LPer1 = vm.addr(1);
+        deal(d.getAddresses().USDC, LPer1, 100000e12);
+        deal(d.getAddresses().WETH, LPer1, 100000e18);
+        uint256 amountUSDC = 1000e6;
+        uint256 amountWETH = 1e18;
+        assertEq(IERC20Decimals(d.getAddresses().xusdl).balanceOf(LPer1), 0, "No zero xUSDL balance");
+        assertEq(IERC20Decimals(d.getAddresses().xLemmaSynthEth).balanceOf(LPer1), 0, "No zero xLemmaSynth balance");
+        vm.startPrank(LPer1);
+        IERC20(d.getAddresses().USDC).approve(address(d.lemmaSwap()), type(uint256).max);
+        IERC20(d.getAddresses().WETH).approve(address(d.lemmaSwap()), amountWETH);
+
+        d.lemmaSwap().addLiquidity(
+            d.getAddresses().USDC,
+            d.getAddresses().WETH,
+            amountUSDC,
+            amountWETH,
+            0,
+            0,
+            LPer1,
+            type(uint256).max
+        );
+        vm.stopPrank();
+        assertGt(IERC20Decimals(d.getAddresses().xusdl).balanceOf(LPer1), 0, "No non-zero xUSDL balance");
+        assertGt(IERC20Decimals(d.getAddresses().xLemmaSynthEth).balanceOf(LPer1), 0, "No non-zero xLemmaSynth balance");
+    } 
 }
