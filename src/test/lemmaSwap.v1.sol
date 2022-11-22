@@ -409,7 +409,7 @@ contract ContractTest is Test {
         IERC20(d.getAddresses().USDC).approve(address(d.lemmaSwap()), amountUSDC);
         IERC20(d.getAddresses().WETH).approve(address(d.lemmaSwap()), amountWETH);
 
-        d.lemmaSwap().addLiquidity(
+        d.lemmaSwap().addLiquidity_independentAmounts(
             d.getAddresses().USDC,
             d.getAddresses().WETH,
             amountUSDC,

@@ -581,6 +581,26 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
 
 
 
+    function addLiquidity_independentAmounts(
+        address stable,
+        address variable,
+        uint256 amountStable,
+        uint256 amountVariable,
+        uint256 unusedStable,
+        uint256 unusedVariable,
+        address to,
+        uint256 deadline
+    ) external override returns (uint256 amountXA, uint256 amountXB, uint256 unused) {
+        require(amountStable > 0, "Zero Stable Amount");
+        require(amountVariable > 0, "Zero Variable Amount");
+        require(to != address(0), "Invalid recipient");
+        require(block.timestamp <= deadline, "Expired");
+
+        (, amountXA) = _addLiquidityStable(stable, variable, amountStable, to);
+        (, amountXB) = _addLiquidityVariable(variable, amountVariable, to);
+    }
+
+
     function addLiquidity(
         address stable,
         address variable,
@@ -599,6 +619,8 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         (, amountXA) = _addLiquidityStable(stable, variable, amountStable, to);
         (, amountXB) = _addLiquidityVariable(variable, amountVariable, to);
     }
+
+
 
 
 }
