@@ -601,6 +601,43 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         (, amountXB) = _addLiquidityVariable(variable, amountVariable, to);
     }
 
+    function _printAmount(string memory s, uint256 amount, uint256 decimals) internal view {
+        console.log(s, amount, " - decimals = ", decimals);
+    }
+
+    struct addLiquidityArgs {
+        address stable;
+        address variable;
+        uint256 amountStableDesired_nd;
+        uint256 amountVariableDesired_nd;
+        uint256 amountStableMin_nd;
+        uint256 amountVariableMin_nd;
+        uint256 price;
+        address to;
+    }
+
+    function _addLiquidityStableVariable(addLiquidityArgs memory args) internal returns(uint256 amountXStable, uint256 amountXVariable) {
+        _printAmount("Price = ", args.price, 18);
+        uint256 amountStableOptimal_nd = args.price * convertAmountIn18Decimals(IERC20Decimals(args.variable), args.amountVariableDesired_nd) * 10**(IERC20Decimals(args.stable).decimals()) / 10**(18 + IERC20Decimals(args.variable).decimals());
+        require(amountStableOptimal_nd > args.amountStableMin_nd, "Not enough amount stable");
+        if(amountStableOptimal_nd <= args.amountStableDesired_nd) {
+            console.log("Case 1");
+            _printAmount("amountStableOptimal_nd = ", amountStableOptimal_nd, IERC20Decimals(args.stable).decimals());
+            _printAmount("amountVariableDesired_nd = ", args.amountVariableDesired_nd, IERC20Decimals(args.variable).decimals());
+            (, amountXStable) = _addLiquidityStable(args.stable, args.variable, amountStableOptimal_nd, args.to);
+            (, amountXVariable) = _addLiquidityVariable(args.variable, args.amountVariableDesired_nd, args.to);
+        } else {
+            uint256 amountVariableOptimal_nd = convertAmountIn18Decimals(IERC20Decimals(args.variable), args.amountStableDesired_nd) * 10**(IERC20Decimals(args.variable).decimals() + 18) / (args.price * 10**(IERC20Decimals(args.stable).decimals()));
+            require(amountVariableOptimal_nd > args.amountVariableMin_nd, "Not enough amount variable");
+            require(amountVariableOptimal_nd <= args.amountVariableDesired_nd, "Too much variable required");
+            console.log("Case 2");
+            _printAmount("amountStableDesired_nd = ", args.amountStableDesired_nd, IERC20Decimals(args.stable).decimals());
+            _printAmount("amountVariableOptimal_nd = ", amountVariableOptimal_nd, IERC20Decimals(args.variable).decimals());
+            (, amountXStable) = _addLiquidityStable(args.stable, args.variable, args.amountStableDesired_nd, args.to);
+            (, amountXVariable) = _addLiquidityVariable(args.variable, amountVariableOptimal_nd, args.to);
+        }
+    }
+
 
     function addLiquidity(
         address stable,
@@ -611,26 +648,25 @@ contract LemmaSwap is AccessControl, ReentrancyGuard, ILemmaSwap, Test {
         uint256 amountVariableMin_nd,
         address to,
         uint256 deadline
-    ) external override returns (uint256 amountXA, uint256 amountXB, uint256 unused) {
+    ) external override returns (uint256 amountXStable, uint256 amountXVariable, uint256 unused) {
         require(amountStableDesired_nd > 0, "Zero Stable Amount");
         require(amountVariableDesired_nd > 0, "Zero Variable Amount");
         require(to != address(0), "Invalid recipient");
         require(block.timestamp <= deadline, "Expired");
 
         uint256 markPrice_18 = Perp1(USDL1(address(usdl)).perpetualDEXWrappers(0, variable)).getMarkPrice();
-
-        uint256 amountStableOptimal_nd = markPrice_18 * convertAmountIn18Decimals(IERC20Decimals(variable), amountVariableDesired_nd) * 10**(IERC20Decimals(stable).decimals()) / 10**(18 + IERC20Decimals(variable).decimals());
-        require(amountStableOptimal_nd > amountStableMin_nd, "Not enough amount stable");
-        if(amountStableOptimal_nd <= amountStableDesired_nd) {
-            (, amountXA) = _addLiquidityStable(stable, variable, amountStableOptimal_nd, to);
-            (, amountXB) = _addLiquidityVariable(variable, amountVariableDesired_nd, to);
-        } else {
-            uint256 amountVariableOptimal_nd = convertAmountIn18Decimals(IERC20Decimals(variable), amountStableDesired_nd) * 10**(IERC20Decimals(variable).decimals() + 18) / (markPrice_18 * 10**(IERC20Decimals(stable).decimals()));
-            require(amountVariableOptimal_nd > amountVariableMin_nd, "Not enough amount variable");
-            require(amountVariableOptimal_nd <= amountVariableDesired_nd, "Too much variable required");
-            (, amountXA) = _addLiquidityStable(stable, variable, amountStableDesired_nd, to);
-            (, amountXB) = _addLiquidityVariable(variable, amountVariableOptimal_nd, to);
-        }
+        (amountXStable, amountXVariable) = _addLiquidityStableVariable(
+            addLiquidityArgs({
+                stable: stable,
+                variable: variable,
+                amountStableDesired_nd: amountStableDesired_nd,
+                amountVariableDesired_nd: amountVariableDesired_nd,
+                amountStableMin_nd: amountStableMin_nd,
+                amountVariableMin_nd: amountVariableMin_nd,
+                price: markPrice_18,
+                to: to
+            })
+        );
     }
 
 
